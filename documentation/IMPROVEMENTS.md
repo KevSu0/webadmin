@@ -6,7 +6,7 @@ This document tracks the major improvements and refactors made to the Camera Wor
 
 - **Date**: 2025-08-12
 - **Summary**: Overhauled the entire Firebase integration to resolve critical stability and connection issues.
-- **Problem**: The original implementation used a fragile, "ultra-minimal" configuration that disabled Firebase's native offline persistence and real-time listeners. This resulted in complex, error-prone manual workarounds for connection handling and session management.
+- **Problem**: The original implementation used a fragile, "ultra-minimal" configuration that intentionally disabled Firebase's native offline persistence and real-time listeners. This resulted in complex, error-prone manual workarounds for connection handling and session management.
 - **Solution**:
     - Re-enabled and correctly configured Firestore's `enableIndexedDbPersistence` for robust offline capabilities.
     - Replaced manual authentication checks with the standard `onAuthStateChanged` listener for real-time, reliable session management.

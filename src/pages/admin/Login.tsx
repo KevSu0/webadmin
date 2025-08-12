@@ -17,7 +17,7 @@ const AdminLogin: React.FC = () => {
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   
   const navigate = useNavigate();
-  const { currentUser, checkAuthState } = useAuth();
+  const { currentUser } = useAuth();
 
   // Redirect if already authenticated as admin
   useEffect(() => {
@@ -58,9 +58,6 @@ const AdminLogin: React.FC = () => {
         return;
       }
 
-      // Manually update auth state after successful login
-      await checkAuthState();
-      
       toast.success('Welcome back, Admin!');
       navigate('/admin/dashboard');
     } catch (error: any) {

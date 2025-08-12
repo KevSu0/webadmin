@@ -146,19 +146,18 @@ const Categories: React.FC = () => {
 
     try {
       if (editingCategory) {
-        await updateCategory(
-          editingCategory.id,
-          formData.name.trim(),
-          formData.description.trim(),
-          formData.image
-        );
+        await updateCategory(editingCategory.id, {
+          name: formData.name.trim(),
+          description: formData.description.trim(),
+          image: formData.image,
+        });
         toast.success('Category updated successfully');
       } else {
-        await createCategory(
-          formData.name.trim(),
-          formData.description.trim(),
-          formData.image
-        );
+        await createCategory({
+          name: formData.name.trim(),
+          description: formData.description.trim(),
+          image: formData.image,
+        });
         toast.success('Category created successfully');
       }
 

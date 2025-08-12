@@ -1,17 +1,27 @@
 // Customer products page
-import React from 'react';
+import React, { useState } from 'react';
+import { ChevronDown } from 'lucide-react';
 
 const Products: React.FC = () => {
+  const [filtersVisible, setFiltersVisible] = useState(false);
+
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
       <div className="mb-8">
         <h1 className="text-3xl font-bold text-gray-900">Products</h1>
-        <p className="mt-2 text-gray-600">Discover our complete range of photography equipment</p>
+        <p className="mt-2 text-gray-600">Discover our complete range of photography equipment.</p>
       </div>
 
       {/* Filters */}
-      <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 mb-8">
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+      <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4 mb-8">
+        <button
+          onClick={() => setFiltersVisible(!filtersVisible)}
+          className="w-full flex justify-between items-center md:hidden p-2 rounded-md hover:bg-gray-100"
+        >
+          <span className="font-semibold">Filters</span>
+          <ChevronDown className={`w-5 h-5 transition-transform ${filtersVisible ? 'rotate-180' : ''}`} />
+        </button>
+        <div className={`grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4 mt-4 ${filtersVisible ? 'block' : 'hidden'} md:grid`}>
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
               Category

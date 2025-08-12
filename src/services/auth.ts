@@ -30,7 +30,7 @@ export const signIn = async (email: string, password: string): Promise<FirebaseU
     return result.user;
   } catch (error: any) {
     console.error('Error signing in:', error);
-    const friendlyMessage = getFirebaseErrorMessage(error.code, 'Sign-in failed. Please check your credentials.');
+    const friendlyMessage = getFirebaseErrorMessage(error.code);
     const enhancedError = new Error(friendlyMessage);
     enhancedError.name = error.code || 'SignInError';
     throw enhancedError;
@@ -71,7 +71,7 @@ export const registerUser = async (userData: UserRegistration): Promise<Firebase
     return result.user;
   } catch (error: any) {
     console.error('Error registering user:', error);
-    const friendlyMessage = getFirebaseErrorMessage(error.code, 'Registration failed. Please try again.');
+    const friendlyMessage = getFirebaseErrorMessage(error.code);
     const enhancedError = new Error(friendlyMessage);
     enhancedError.name = error.code || 'RegistrationError';
     handleError(enhancedError, 'user registration');
@@ -183,7 +183,7 @@ export const createAdminUser = async (userData: UserRegistration): Promise<ApiRe
     return { success: true, data: result.user, message: 'Admin user created successfully' };
   } catch (error: any) {
     console.error('Error creating admin user:', error);
-    const message = getFirebaseErrorMessage(error.code, 'Failed to create admin user.');
+    const message = getFirebaseErrorMessage(error.code);
     return { success: false, error: error.code || 'AdminCreationError', message };
   }
 };
@@ -225,7 +225,7 @@ export const sendPasswordReset = async (email: string): Promise<ApiResponse<void
     };
   } catch (error: any) {
     console.error('Error sending password reset email:', error);
-    const friendlyMessage = getFirebaseErrorMessage(error.code, 'Failed to send password reset email.');
+    const friendlyMessage = getFirebaseErrorMessage(error.code);
     return { success: false, error: error.code || 'PasswordResetError', message: friendlyMessage };
   }
 };

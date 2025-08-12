@@ -13,7 +13,7 @@ const AdminLogin: React.FC = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [showForgotPassword, setShowForgotPassword] = useState(false);
-  const { currentUser, checkAuthState } = useAuth();
+  const { currentUser } = useAuth();
   const navigate = useNavigate();
 
   // Redirect if already logged in as admin
@@ -44,9 +44,6 @@ const AdminLogin: React.FC = () => {
         toast.error('Access denied. Admin privileges required.');
         return;
       }
-      
-      // Manually update auth state after successful login
-      await checkAuthState();
       
       toast.success('Welcome back, Admin!');
       navigate('/admin');

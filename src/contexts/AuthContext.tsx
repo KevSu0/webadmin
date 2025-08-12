@@ -1,6 +1,7 @@
 // Authentication context using real-time Firebase listeners
 import React, { createContext, useContext, useEffect, useState, ReactNode, useCallback } from 'react';
 import { User as FirebaseUser, onAuthStateChanged } from 'firebase/auth';
+import { Timestamp } from 'firebase/firestore';
 import { auth, db } from '../services/firebase';
 import { User } from '../types';
 import { getUserData, logout as signOutUser } from '../services/auth';
@@ -54,6 +55,9 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
           phone: user.phoneNumber || '',
           role: 'customer',
           addresses: [],
+          status: 'active',
+          createdAt: Timestamp.now(),
+          updatedAt: Timestamp.now(),
         };
         setCurrentUser(basicUser);
       }
@@ -67,6 +71,9 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         displayName: 'Error Loading Profile',
         role: 'customer',
         addresses: [],
+        status: 'active',
+        createdAt: Timestamp.now(),
+        updatedAt: Timestamp.now(),
       });
     } finally {
       setLoading(false);

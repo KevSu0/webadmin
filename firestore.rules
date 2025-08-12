@@ -1,0 +1,154 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // Helper functions
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+    
+    function isAdmin() {
+      return isAuthenticated() && request.auth.token.admin == true;
+    }
+    
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+    
+    function isValidRole(role) {
+      return role in ['admin', 'customer'];
+    }
+    
+    function isValidUserData(data) {
+      return data.keys().hasAll(['email', 'displayName', 'role', 'status', 'createdAt']) &&
+             data.email is string &&
+             data.displayName is string &&
+             isValidRole(data.role) &&
+             data.status in ['active', 'inactive', 'suspended'] &&
+             data.createdAt is timestamp;
+    }
+    
+    function isValidProductData(data) {
+      return data.keys().hasAll(['name', 'description', 'price', 'categoryID', 'stock', 'isSecondhand', 'specialistPhone', 'status', 'createdAt', 'updatedAt']) &&
+             data.name is string &&
+             data.description is string &&
+             data.price is number &&
+             data.price > 0 &&
+             data.categoryID is string &&
+             data.stock is number &&
+             data.stock >= 0 &&
+             data.isSecondhand is bool &&
+             data.specialistPhone is string &&
+             data.status in ['active', 'inactive', 'draft'] &&
+             data.createdAt is timestamp &&
+             data.updatedAt is timestamp;
+    }
+    
+    function isValidCategoryData(data) {
+      return data.keys().hasAll(['name', 'description', 'status', 'createdAt', 'updatedAt']) &&
+             data.name is string &&
+             data.description is string &&
+             data.status in ['active', 'inactive', 'pending'] &&
+             data.createdAt is timestamp &&
+             data.updatedAt is timestamp;
+    }
+    
+    function isValidOrderData(data) {
+      return data.keys().hasAll(['userId', 'products', 'shippingAddress', 'totalAmount', 'status', 'paymentMethod', 'createdAt']) &&
+             data.userId is string &&
+             data.products is list &&
+             data.shippingAddress is map &&
+             data.totalAmount is number &&
+             data.totalAmount > 0 &&
+             data.status in ['pending', 'confirmed', 'shipped', 'delivered', 'cancelled', 'processing'] &&
+             data.paymentMethod is string &&
+             data.createdAt is timestamp;
+    }
+    
+    // Users collection rules
+    match /users/{userId} {
+      // Allow users to read their own profile, admins can read all
+      allow read: if isOwner(userId) || isAdmin();
+      
+      // Allow user creation only during signup with customer role and active status
+      allow create: if isAuthenticated() && 
+                       isOwner(userId) && 
+                       isValidUserData(resource.data) &&
+                       resource.data.role == 'customer' && // Prevent self-assignment of admin role
+                       resource.data.status == 'active'; // New users start as active
+      
+      // Allow users to update their own profile, but not their role
+      // Only admins can change user roles
+      allow update: if isOwner(userId) && 
+                       isValidUserData(resource.data) &&
+                       (resource.data.role == request.auth.token.role || // Role unchanged
+                        isAdmin()); // Or admin is making the change
+      
+      // Only admins can delete users
+      allow delete: if isAdmin();
+    }
+    
+    // Products collection rules
+    match /products/{productId} {
+      // Public can only read active products, admins can read all
+      allow read: if resource.data.status == 'active' || isAdmin();
+      
+      // Only admins can create, update, or delete products
+      allow create: if isAdmin() && isValidProductData(resource.data);
+      allow update: if isAdmin() && isValidProductData(resource.data);
+      allow delete: if isAdmin();
+    }
+    
+    // Categories collection rules
+    match /categories/{categoryId} {
+      // Public can only read active categories, admins can read all
+      allow read: if resource.data.status == 'active' || isAdmin();
+      
+      // Only admins can create, update, or delete categories
+      allow create: if isAdmin() && isValidCategoryData(resource.data);
+      allow update: if isAdmin() && isValidCategoryData(resource.data);
+      allow delete: if isAdmin();
+    }
+    
+    // Orders collection rules
+    match /orders/{orderId} {
+      // Users can only read their own orders, admins can read all
+      allow read: if isAuthenticated() && 
+                     (resource.data.userId == request.auth.uid || isAdmin());
+      
+      // Users can only create orders for themselves
+      allow create: if isAuthenticated() && 
+                       isValidOrderData(resource.data) &&
+                       resource.data.userId == request.auth.uid;
+      
+      // Users can update their own pending orders, admins can update any order
+      allow update: if isAuthenticated() && 
+                       isValidOrderData(resource.data) &&
+                       (resource.data.userId == request.auth.uid || isAdmin());
+      
+      // Only admins can delete orders
+      allow delete: if isAdmin();
+    }
+    
+    // Cart collection rules (if implemented as Firestore collection)
+    match /carts/{userId} {
+      // Users can only access their own cart
+      allow read, write: if isOwner(userId);
+    }
+    
+    // Admin-only collections (if any)
+    match /admin/{document=**} {
+      allow read, write: if isAdmin();
+    }
+    
+    // Allow reading the test collection for connection checks
+    match /_test_/{document=**} {
+      allow read: if true;
+    }
+
+    // Deny all other access
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

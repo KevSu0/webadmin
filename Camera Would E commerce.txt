@@ -1,0 +1,419 @@
+**Prompt 1 of 5: The Foundational Framework & Admin Control Panel for 'Camera World'**
+
+#### **1. About the Application (The Grand Vision)**
+
+This project, "Camera World," will be a premier, responsive e-commerce platform for new and secondhand camera equipment. This initial, foundational prompt is the most critical phase. We are not just building pages; we are constructing the entire **central nervous system** of the business. The goal is to create a secure, scalable, and highly intuitive administrative control panel that empowers the store owner to manage every aspect of the product catalog with zero friction. This backend system will be the single source of truth for the entire application, built directly on a robust Firebase stack (Authentication, Firestore, Storage).
+
+#### **2. Rules of Development (The Architectural Constitution)**
+
+These principles are mandatory and must be reflected in every line of code you generate.
+
+*   **The Jigsaw Puzzle Architecture (Modularity):** Every distinct piece of functionality must be encapsulated in its own reusable component. For example, the `AdminSidebar`, `ProductForm`, `DataTable`, and `ImageUploader` must be built as independent components that communicate via props and state. This ensures our application is clean, maintainable, and easy to debug.
+*   **The Fluid Grid Mandate (Responsiveness):** All development must adhere to a strict **mobile-first** philosophy. Every single component and page, from the login form to the complex product table, must be perfectly optimized for both mobile and desktop screens. Use modern CSS like Flexbox and Grid to create fluid layouts. Sidebars must collapse into hamburger menus, and data tables must intelligently transform into vertical card lists on smaller viewports.
+*   **The Serverless-First Doctrine (Direct Firebase Integration):** The application will operate without a traditional backend server.
+    *   **Authentication:** All user sign-in/sign-up logic must be handled exclusively by **Firebase Authentication**.
+    *   **Database:** **Firestore** is the sole database. All application data (products, users, etc.) must be read from and written to Firestore collections. Utilize real-time listeners (`onSnapshot`) where necessary to ensure the UI always reflects the current state of the database without manual refreshes.
+    *   **File Storage:** All image assets must be uploaded to and served from **Firebase Storage**.
+*   **The Predictable State & Data Flow Principle:** A clear distinction must be made between local and shared state.
+    *   **Local State:** Use for UI-only concerns within a single component (e.g., if a modal is open, the value of a search input).
+    *   **Shared/Global State:** This is the data fetched from Firestore (e.g., the product list, user profile). This data should be fetched at the highest necessary level and passed down to child components.
+*   **The User-Centric Feedback Principle:** An admin user must *always* know the state of the application. Implement clear visual feedback for all asynchronous operations:
+    *   **Loading States:** Show spinners or skeletons while data is being fetched from Firestore. Disable buttons and show a loading indicator when a form is being submitted.
+    *   **Success/Error Notifications:** Use non-obtrusive "toast" notifications to confirm actions (e.g., "Product saved successfully!") or to display user-friendly error messages (e.g., "Image upload failed. Please try again.").
+
+#### **3. The Development to be Completed (The Detailed Mission Blueprint)**
+
+Your task is to build the complete administrative foundation, from the data model to the full-featured user interface.
+
+**Part A: Establish the Firestore Data Architecture (The Bedrock)**
+Define the following collections and their data models in Firestore. This is the application's immutable blueprint.
+
+*   **`products` collection:**
+    *   Fields: `name` (string), `description` (long string/text), `features` (array of strings), `price` (number), `offerPrice` (number, optional for sales), `categoryID` (string, a reference to a document in `categories`), `imageUrls` (array of strings), `stock` (number), `isSecondhand` (boolean), `condition` (string, conditionally required if `isSecondhand` is true), `specialistPhone` (string), `createdAt` (timestamp), `updatedAt` (timestamp).
+    *   **Scalability Note:** Prepare this collection for future querying by creating Firestore indexes on `price` and `categoryID`.
+*   **`categories` collection:**
+    *   Fields: `name` (string, e.g., "DSLR Cameras"), `slug` (string, e.g., "dslr-cameras", for creating clean, SEO-friendly URLs).
+*   **`users` collection:**
+    *   Fields: `email` (string), `displayName` (string), `phone` (string), `role` (string, must be either 'customer' or 'admin'), `addresses` (array of address objects), `createdAt` (timestamp).
+*   **`orders` collection (Define Now, Use Later):**
+    *   Fields: `userId`, `shippingAddress` (object copy), `products` (array of product objects), `totalAmount`, `status` (string: "Pending", etc.), `paymentMethod`, `createdAt`.
+
+**Part B: Construct the Secure Admin Authentication & Role-Based Access Control (The Gatehouse)**
+This flow is the primary security layer for the entire business.
+
+*   **Admin Login Page (`/admin/login`):** A professional, centered login form.
+    *   **UX:** When the "Login" button is clicked, it should enter a disabled state and show a loading spinner to indicate an ongoing process. Display specific, user-friendly error messages returned from Firebase Auth (e.g., "Invalid email or password").
+*   **The Critical Role Check Logic:** This is non-negotiable for security.
+    1.  Authenticate the user with Firebase Authentication.
+    2.  On success, fetch that user's document from the `users` collection using their `uid`.
+    3.  **Check the `role` field.** If and only if `role === 'admin'`, redirect them to `/admin/dashboard`.
+    4.  **Edge Case Handling:** If the user authenticates successfully but their `role` is 'customer' or does not exist, immediately log them out and show an "Access Denied" error message. If a logged-in customer attempts to navigate directly to an `/admin` URL, a route guard must redirect them away (e.g., to the customer homepage).
+*   **Firestore Security Rules:** Implement the backend enforcement for this logic. The rules must state: "Allow read/write access to the entire database if `request.auth.token.role == 'admin'`. Other specific rules for customers will be added later."
+
+**Part C: Build the Admin Panel Shell (The Command Center)**
+This is the container for all admin functionality.
+
+*   **Layout & Navigation:** Create a responsive two-column layout for all `/admin/` routes. The left sidebar must be fixed on desktop and collapse into a hamburger-triggered slide-out menu on mobile.
+*   **Sidebar Links:** `Dashboard`, `Products`, and `Categories`.
+*   **Initial Dashboard View:** The `/admin/dashboard` page should be a welcome screen. Display "Welcome, [Admin's Display Name]!" and include several placeholder "stat cards" (e.g., for Total Products, Total Orders, Revenue) that will be wired up with real data in later prompts.
+
+**Part D: Implement Comprehensive Product Management (The Inventory Engine)**
+This is the most interactive part of the admin panel.
+
+1.  **The Unified Product Form (`/admin/products/new` and `/admin/products/edit/:productId`):**
+    *   **Mode Awareness:** The form component must be intelligent. It should detect from the URL whether it is in "Create Product" or "Edit Product" mode. In edit mode, it must first fetch the specified product's data from Firestore and populate all the form fields.
+    *   **Robust Image Uploader:** This component must allow multiple file selections. For each file, it must show a thumbnail preview, file name, and an individual progress bar during upload to Firebase Storage. The user must be able to remove a selected image before the final form submission. In edit mode, it must display existing images with a "delete" icon for each.
+    *   **Live Client-Side Validation:** Provide instant feedback to the admin. `name` cannot be empty. `price` and `stock` must be positive numerical inputs.
+    *   **Dynamic Category Dropdown:** The dropdown for "Category" must be populated by fetching all documents from the `categories` collection.
+    *   **Conditional Logic:** The text input for "Condition" must be disabled and hidden by default and only become visible and required if the "Is Secondhand" checkbox is ticked.
+    *   **Submission Logic:** On submit, the form must gather all data, including the final URLs of the successfully uploaded images, and either create a new document or update the existing one in the `products` collection. Set both `createdAt` (on create) and `updatedAt` (on update) timestamps.
+
+2.  **The Scalable Product Data Table (`/admin/products`):**
+    *   **Functionality:** Display all products from the `products` collection. Include a search bar at the top to filter products by `name` in real-time. Columns should include: Thumbnail, Name, Category, Price, Stock.
+    *   **Scalability:** Implement **server-side pagination**. Do not fetch all products at once. Fetch them in batches (e.g., 20 per page) to ensure the application remains fast even with thousands of products.
+    *   **Responsive Transformation:** On desktop, this is a table. On mobile, it must reflow into a list of cards, with each card clearly labeling its data points (e.g., "Price: $1999.99", "Stock: 15").
+    *   **Actions:** Each row/card must have an "Edit" button (linking to the edit route) and a "Delete" button.
+    *   **Deletion Logic (Critical):** The "Delete" button must trigger a confirmation modal. If confirmed, execute a **two-step transactional deletion**: 1. Delete the Firestore document. 2. On successful deletion, retrieve the `imageUrls` from the returned data and trigger a loop to delete each associated image file from Firebase Storage to prevent orphaned files and save costs.
+
+**Part E: Implement Dynamic Category Management (The Organizer)**
+
+*   **UI (`/admin/categories`):** A simple and clean interface. Display the existing categories in a list. Above it, have a text input and an "Add Category" button.
+*   **Creation/Deletion Logic:** The "Add" button creates a new document in `categories`. Each category in the list has a "Delete" button.
+*   **The Critical Deletion Edge Case:** Implement a safeguard. Before deleting a category, the logic *must* first query the `products` collection to check if any products are using that `categoryID`. If so, the deletion must be blocked, and an error message must be shown to the admin (e.g., "Cannot delete 'Lenses'. It is currently used by 12 products."). This maintains data integrity.
+
+
+### **Prompt 2 of 5: The Public Storefront & Immersive Product Discovery**
+
+#### **1. About the Application (The Vision)**
+
+With the admin panel established as our backend, this prompt's mission is to build the beautiful and highly functional "shop window" for "Camera World." We will create the entire public-facing website where customers can browse the product catalog, view detailed product information, and find exactly what they need. This phase is all about creating a seamless, "Amazon-like" discovery experience that is both visually appealing and performant, without requiring the user to log in.
+
+#### **2. Rules of Development (The Guiding Principles)**
+
+The architectural principles from Prompt 1 remain in full effect. We will add the following specific focus for this phase:
+
+*   **Read-Only Data Access:** For this entire prompt, all interactions with Firestore will be **read-only**. We are fetching and displaying product and category data that the admin has already created. No data will be written to the database yet.
+*   **Performance is Paramount:** The customer experience hinges on speed. Pages must load quickly, and interactions must feel instantaneous. This means optimizing Firestore queries and using efficient rendering strategies. Fetch only the data you need for a given view. For instance, the product listing page should not fetch the full `description` for every product, only the fields needed for the display card.
+*   *   **Component Reuse:** The `ProductCard` component we create for the main listing page must be reused across the entire application—on the homepage, in search results, on special offer pages, etc. This ensures a consistent look and feel and minimizes code duplication.
+*   **SEO-Friendly URLs:** We will structure our page routes to be clean, readable, and good for search engine optimization, using the `slug` field we created in the `categories` collection.
+
+#### **3. The Development to be Completed (This Prompt's Mission)**
+
+Your task is to build the complete, non-authenticated customer journey, from landing on the homepage to examining a product in detail.
+
+**Part A: Construct the Global Store Layout & Homepage**
+Create the main shell and the welcoming front door of the store.
+
+*   **Global Components:**
+    *   **Header:** Design a modern, responsive header component that will be present on all customer-facing pages. It must contain:
+        *   The "Camera World" logo.
+        *   Primary navigation links: `Home`, `All Products`, `Secondhand`, `Special Offers`.
+        *   A prominent **Global Search Bar**.
+        *   A **Cart Icon** (for now, this is a visual placeholder).
+    *   **Footer:** Design a comprehensive footer with links for things like "About Us," "Contact," "Shipping Policy," and social media icons.
+*   **Homepage (`/`):** This is the most important marketing page.
+    *   **Hero Section:** A large, high-impact banner image or carousel to showcase featured promotions or new arrivals.
+    *   **Category Showcase:** A visually engaging grid or row of cards that displays several key product categories (e.g., "DSLRs," "Lenses," "Drones"). These should be fetched dynamically from the `categories` collection and link to their respective category pages. The links should use the category slug (e.g., `/category/dslr-cameras`).
+    *   **Featured Products Section:** A curated list of products under a heading like "Top Sellers" or "Featured Gear." This section will fetch a limited number (e.g., 8) of products from Firestore to display using the reusable `ProductCard` component.
+
+**Part B: Build the Product Listing Page (PLP) with Advanced Filtering**
+This is the core browsing engine where users will spend most of their time.
+
+*   **Layout (`/products` and `/category/:slug`):** Create a responsive two-column layout. The left column will contain filtering options, and the right column will display the product grid.
+*   **Product Grid:** The right column will fetch products from Firestore and display them in a responsive grid. Each item in the grid will be an instance of the `ProductCard` component.
+    *   **ProductCard Component:** This crucial, reusable component must display: the primary product image, product name, price (and the `offerPrice` with a "slash-through" on the original price if an offer exists), and a quick "View Details" button.
+*   **Advanced Filtering Panel (Left Column):** This panel must be interactive and update the product grid in real-time without a page reload.
+    *   **Filter by Category:** Display a list of checkboxes for all categories, fetched dynamically from the `categories` collection.
+    *   **Filter by Condition:** Include a toggle or radio buttons for "New" and "Secondhand."
+    *   **Filter by Price Range:** Implement a slider or two input fields for "Min Price" and "Max Price."
+*   **Sorting Functionality:** Above the product grid, include a dropdown menu to sort the displayed results by: `Price: Low to High`, `Price: High to Low`, and `Newest Arrivals` (sorting by `createdAt` timestamp).
+*   **Firestore Query Logic:** The core of this page is a dynamic Firestore query. The query must be reconstructed and re-executed whenever any filter or sorting option is changed, updating the product grid instantly.
+*   **Edge Case Handling:** If no products match the selected filters, the grid area should display a user-friendly message like "No products found. Try adjusting your filters!" instead of just being blank. Implement pagination (e.g., "Load More" button or page numbers) to handle large numbers of products gracefully, ensuring good performance by fetching products in batches.
+
+**Part C: Create the Product Detail Page (PDP)**
+This page provides an in-depth view of a single product.
+
+*   **Dynamic Route (`/product/:productId`):** This page must fetch data for a single product from Firestore based on the `productId` in the URL.
+*   **Layout:** A responsive two-column layout.
+    *   **Left Column (Image Gallery):** Display the main product image prominently. If multiple `imageUrls` exist for the product, display them as a main image with clickable thumbnails below it.
+    *   **Right Column (Product Information & Actions):**
+        *   **Product Name:** Large and bold.
+        *   **Price:** Clearly display the price. If `offerPrice` exists, show it as the primary price and the original `price` as a discounted reference.
+        *   **Stock Status:** Display an "In Stock" or "Out of Stock" message based on the `stock` field.
+        *   **Specialist Contact:** Prominently display the `specialistPhone` number with a clear call-to-action like "Have questions? Contact a Specialist at [Phone Number]."
+        *   **Add to Cart Button:** A large, prominent button. For now, this button will be a visual placeholder. We will add its full functionality in the next prompt. If a product is out of stock, this button must be **disabled** and visually distinct.
+        *   **Detailed Information:** Below the main action area, use tabs or accordions to neatly display the `description` and the `features` (as a bulleted list).
+
+**Part D: Implement Global Search Functionality**
+Enable users to find products from anywhere on the site.
+
+*   **Search Logic:** When a user types in the header's search bar and presses Enter or clicks a search icon, navigate them to a dedicated search results page (`/search?q=[search-term]`).
+*   **Search Results Page:** This page will reuse the Product Listing Page's layout (product grid, filters, sorting). It will perform a Firestore query to find products where the `name` or `description` field contains the search term.
+*   **Nuance:** Since Firestore's native search is limited, this initial implementation will be a basic substring match. The results should include both new and secondhand items that match the query. If the search yields no results, display a clear "No results found for '[search-term]'" message.
+
+**Part E: Build the Specialized Pages**
+Create the dedicated pages for offers and secondhand goods.
+
+*   **Special Offers Page (`/special-offers`):** This page will reuse the complete Product Listing Page component. It will be pre-filtered to only show products where the `offerPrice` field exists and is less than the `price` field.
+*   **Secondhand Page (`/secondhand`):** This page will also reuse the PLP component. It will be pre-filtered to show only products where the `isSecondhand` boolean field is `true`. The `ProductCard` on this page should be slightly modified or have a conditional style to display the product's `condition` as a prominent badge.
+
+
+### **Prompt 3 of 5: The E-commerce Engine - Cart, User Authentication, and Checkout**
+
+#### **1. About the Application (The Vision)**
+
+This is the pivotal phase where "Camera World" transitions from a static catalog into a dynamic, interactive shopping platform. Our mission is to implement the entire "add-to-cart-to-checkout" pipeline. We will empower users to collect products they are interested in and then seamlessly guide them through the process of creating an account and placing an order. We will prioritize a frictionless user experience, only requiring login/signup at the moment it becomes essential: the checkout.
+
+#### **2. Rules of Development (The Guiding Principles)**
+
+The core principles of modularity, responsiveness, and direct Firebase integration remain paramount. We are now adding a focus on state management and data integrity.
+
+*   **Stateful Logic Separation:** This prompt introduces significant state management challenges. We must handle this cleanly:
+    *   **Guest Cart (Local State):** The cart for a non-logged-in user will exist *only* in the browser's `localStorage`. This is temporary, client-side state.
+    *   **User Cart (Persistent State):** Once a user logs in, their cart will be stored directly in their user document in Firestore. This ensures their cart is preserved across different devices and sessions.
+*   **Transactional Integrity:** When a user places an order, the database operations (creating an order, decrementing stock) must be treated as a single, indivisible action. We will use **Firestore Transactions** to guarantee that either all operations succeed, or none do. This is crucial for preventing overselling and maintaining accurate inventory.
+*   **Conditional Rendering is Key:** The UI will now change significantly based on the user's authentication state. Buttons, navigation links, and entire pages will need to be rendered conditionally based on whether a user is logged in.
+*   **Secure User Data:** From this point forward, all user-specific data (profiles, addresses, orders) must be protected. We will begin implementing more granular **Firestore Security Rules** to ensure a user can only read and write their own data.
+
+#### **3. The Development to be Completed (This Prompt's Mission)**
+
+Your task is to build the complete commerce functionality that bridges the gap between browsing and buying.
+
+**Part A: Implement Universal Cart Functionality**
+Create a flexible cart system that works for both guests and logged-in users.
+
+1.  **"Add to Cart" Logic:**
+    *   Activate the "Add to Cart" button on the Product Detail Page (PDP) and any `ProductCard` components.
+    *   When clicked, the logic must first check if a user is authenticated.
+        *   **If Guest:** Add the `productId` and `quantity` to an array in the browser's `localStorage`.
+        *   **If Logged-in:** Add the product data directly to a `cart` array field within that user's document in the `users` collection in Firestore.
+    *   **Feedback:** After a successful addition, show a confirmation toast notification (e.g., "Added [Product Name] to your cart!") and update the cart icon in the header to reflect the new total item count.
+    *   **Edge Case:** The logic must check against the product's `stock` field. A user should not be able to add a product to the cart if its stock is 0.
+
+2.  **The Cart Page (`/cart`):**
+    *   Create a dedicated page that displays the contents of the cart. It should fetch cart data from `localStorage` for guests or from the user's Firestore document for logged-in users.
+    *   For each item in the cart, display: the product image, name, price, a quantity selector (input field with +/- buttons), and the line item subtotal.
+    *   The quantity selector must allow users to update the quantity or remove the item (by setting quantity to 0 or clicking a "Remove" button). Any changes must immediately update the state in either `localStorage` or Firestore.
+    *   At the bottom of the page, display the total price for all items in the cart.
+    *   Include a prominent **"Proceed to Checkout"** button. If the cart is empty, this button should be disabled.
+
+**Part B: Implement "Just-in-Time" User Authentication**
+Create the login/signup flow that is triggered only when necessary.
+
+1.  **The Authentication Trigger:**
+    *   When the "Proceed to Checkout" button is clicked on the cart page, the primary logic is to check the user's authentication status.
+    *   **If Logged-in:** Proceed directly to the checkout page (`/checkout`).
+    *   **If Guest:** Do **not** proceed. Instead, display a **Login/Signup Modal** overlay.
+
+2.  **The Login/Signup Modal:**
+    *   This modal should offer two clear paths: "Login" (for existing users) and "Sign Up" (for new users) using tabs or distinct forms.
+    *   **Sign Up Form:** Fields for `displayName`, `email`, and `password`. Upon successful registration with Firebase Authentication, create a new document for them in the `users` collection. Set their `role` to 'customer' by default.
+    *   **Login Form:** Standard fields for `email` and `password`.
+
+3.  **The Critical Cart Merge Logic:**
+    *   This is the most important logic for a seamless user experience. After a guest with items in their `localStorage` cart successfully logs in or signs up:
+        1.  Read the cart from `localStorage`.
+        2.  Read the user's existing cart from their Firestore document (it may be empty or have items from a previous session).
+        3.  **Merge the two carts.** Add the items from the local cart to the Firestore cart.
+        4.  **Edge Case (Conflict Resolution):** If the same product exists in both carts, sum their quantities (but do not exceed the product's total stock).
+        5.  Once the merge is complete and the data is saved to Firestore, **clear the `localStorage` cart**.
+        6.  Finally, redirect the now-authenticated user to the checkout page.
+
+**Part C: Build the Multi-Step Checkout Flow**
+Guide the user through the final steps to complete their purchase.
+
+*   **Protected Route (`/checkout`):** This page must be a protected route. If a non-authenticated user tries to access it directly, they should be redirected to the login page.
+*   **Step 1: Shipping Address Management:**
+    *   Display a list of the user's saved addresses, fetched from the `addresses` array in their `users` document. Allow them to select one for shipping.
+    *   Provide a clear "Add New Address" button that reveals a form to add a new address. Submitting this form should add the new address to their user document in Firestore and automatically select it.
+    *   Allow users to edit or delete existing addresses.
+    *   Include a "Continue to Payment" button that is disabled until a shipping address is selected.
+*   **Step 2: Payment Method Selection:**
+    *   Provide two clear radio button options:
+        1.  **"Offline Payment":** With a description like "You will be contacted by our team via email or phone to arrange payment and delivery."
+        2.  **"Online Payment (PhonePe/UPI)":** With a description like "You will be shown payment details after placing the order."
+*   **Step 3: Order Summary & Confirmation:**
+    *   Display a final review of the entire order: the selected shipping address, the chosen payment method, a list of the products being ordered, and the final total cost.
+    *   Include a **"Place Order"** button. This button is the final trigger for the purchase.
+
+**Part D: Implement the Order Creation and Transactional Logic**
+This is the backend logic that finalizes a sale.
+
+*   **The Transactional "Place Order" Function:** When the "Place Order" button is clicked, execute a **Firestore Transaction**:
+    1.  **Read Product Stock:** For each item in the user's cart, first read the current `stock` from its document in the `products` collection.
+    2.  **Validate Stock:** If the quantity in the cart for any item is greater than the available stock, **abort the entire transaction** and show the user a specific error message (e.g., "Sorry, 'Canon R5' is now out of stock. Please remove it from your cart.").
+    3.  **Create Order Document:** If all stock is available, create a new document in the `orders` collection. This document must contain a *snapshot* of all relevant data: `userId`, a *copy* of the selected `shippingAddress` (so it doesn't change if the user later edits their saved address), the `products` array (with the price at the time of purchase), `totalAmount`, chosen `paymentMethod`, and an initial `status` of "Pending".
+    4.  **Update Stock:** For each product in the order, update its document in the `products` collection by decrementing the `stock` field by the quantity purchased.
+    5.  **Clear the Cart:** After the transaction successfully commits, clear the `cart` array in the user's Firestore document.
+*   **Post-Order Redirection:**
+    *   On successful order creation, redirect the user to an **Order Confirmation Page (`/order/success/:orderId`)**.
+    *   This page should display a "Thank you for your order!" message, the new `orderId`, and specific instructions based on the payment method chosen (e.g., "Our team will contact you shortly" for offline, or a placeholder QR code/UPI ID for online).
+
+
+
+### **Prompt 4 of 5: Order Fulfillment & Customer Relationship Management (CRM)**
+
+#### **1. About the Application (The Vision)**
+
+An order has been placed—now what? This prompt's mission is to build the essential infrastructure for handling everything that happens *after* the checkout. We will create the tools for the "Camera World" admin to efficiently manage incoming orders, track their fulfillment status, and view customer history. Simultaneously, we will empower customers by giving them a dedicated profile page to view their order history and manage their personal information. This phase transforms the application from a simple sales tool into a complete operational platform.
+
+#### **2. Rules of Development (The Guiding Principles)**
+
+Our established principles of modularity, responsiveness, and Firebase integration continue to guide us. The key focus for this phase is **data relationship and access control**.
+
+*   **Role-Based Data Visibility:** We must enforce a strict separation of data access. Admins need a global view of all orders and all customers. Customers, however, must *only* be able to see their own orders and their own profile information. This will be enforced both by the logic in the application and, more importantly, by robust **Firestore Security Rules**.
+*   **Data Denormalization for Efficiency:** When an admin views the order list, we want to show the customer's name without needing a separate database query for every single order. We will achieve this by "denormalizing" a small amount of data—storing a copy of the customer's `displayName` directly on the `order` document when it's created. This significantly improves performance on read-heavy dashboards.
+*   **Stateful UI for Management:** The admin interfaces will be stateful. Changing an order's status from "Pending" to "Shipped" should update the UI in real-time and persist that change immediately to Firestore. This creates a dynamic and responsive management experience.
+
+#### **3. The Development to be Completed (This Prompt's Mission)**
+
+Your task is to build the complete post-purchase management system for both administrators and customers.
+
+**Part A: Construct the Admin Order Management Dashboard**
+This is the heart of the store's daily operations.
+
+1.  **The Main Orders View (`/admin/orders`):**
+    *   Create a new page in the admin panel. This page will fetch and display all documents from the `orders` collection, sorted by `createdAt` with the newest orders first.
+    *   **The Orders Table/List:** Display the orders in a responsive table (or card list on mobile). Key columns should include:
+        *   `Order ID`
+        *   `Customer Name` (This data should be denormalized and stored on the order document for efficiency).
+        *   `Date`
+        *   `Total Amount`
+        *   **`Status`:** This is a critical field. Display it as a colored badge or tag (e.g., Pending=Yellow, Processing=Blue, Shipped=Green, Cancelled=Red) for quick visual scanning.
+    *   **Filtering:** Include dropdown filters at the top to allow the admin to view orders by `status` (e.g., "Show only 'Pending' orders").
+
+2.  **The Detailed Order View (`/admin/orders/:orderId`):**
+    *   When an admin clicks on any order in the list, navigate them to this detailed view.
+    *   This page should display **all** information associated with that specific order document:
+        *   Order ID, Date, Status, and Total Amount.
+        *   Full customer details and the complete shipping address that was used for the order.
+        *   A detailed list of the products ordered, including the name, quantity, and the price at the time of purchase for each item.
+    *   **The Fulfillment Workflow:** This is the interactive part of the page.
+        *   Display the current order `status`.
+        *   Provide a dropdown menu and an "Update Status" button to change the status (e.g., from "Pending" to "Processing," from "Processing" to "Shipped").
+        *   **Conditional Logic:** When the status is changed to "Shipped," a new text input field for "Tracking Number" must appear. Saving this should update the `trackingNumber` field on the order document.
+        *   Updating the status must trigger a real-time update in Firestore.
+
+**Part B: Build the Basic Customer Relationship Management (CRM) Tool**
+Provide the admin with a centralized view of their customer base.
+
+1.  **The Customer Listing Page (`/admin/customers`):**
+    *   Create a new page in the admin panel that fetches all users from the `users` collection where the `role` is 'customer'.
+    *   Display these users in a list or table showing their `displayName`, `email`, and `phone` number.
+    *   Include a search bar to allow the admin to quickly find a customer by name or email.
+
+2.  **The Customer Detail View (`/admin/customers/:userId`):**
+    *   When an admin clicks on a customer, navigate to this detailed profile page.
+    *   This page will display:
+        *   The customer's full profile information (`displayName`, `email`, `phone`).
+        *   A list of all their saved `addresses`.
+        *   **Order History:** A crucial CRM feature. This section will perform a new Firestore query to find all documents in the `orders` collection where the `userId` field matches the current customer's ID. Display this history in a compact list, showing Order ID, Date, Total, and Status. This gives the admin a complete 360-degree view of the customer's relationship with the store.
+
+**Part C: Create the Customer-Facing Profile Page**
+Empower customers to manage their own accounts and view their history.
+
+1.  **The Main Profile Page (`/profile` or `/account`):**
+    *   This page must be a **protected route**, accessible only to logged-in users.
+    *   Use a tabbed interface for clean navigation between different sections.
+
+2.  **"My Orders" Tab:**
+    *   This tab will be the default view. It will fetch and display all orders belonging to the currently logged-in user (by querying the `orders` collection where `userId` equals their `uid`).
+    *   Display the orders in a user-friendly list, showing Order ID, Date, Total Amount, and current `Status`.
+    *   **Edge Case:** If a user has no orders, display a friendly message like "You haven't placed any orders yet. Ready to find your next piece of gear?" with a button that links to the main products page.
+
+3.  **"My Addresses" Tab:**
+    *   This tab allows the user to manage their shipping information for faster checkouts in the future.
+    *   It will fetch the `addresses` array from the user's document in Firestore and display each address.
+    *   Provide functionality to **Add** a new address, **Edit** an existing one, and **Delete** an address. All actions must directly update the `users` collection in Firestore.
+    *   Allow the user to set one address as their "Default" address.
+
+4.  **"Profile Details" Tab:**
+    *   A simple form where the user can view and update their `displayName` and `phone` number. The email should be displayed but non-editable.
+
+**Part D: Solidify Firestore Security Rules for Data Segregation**
+This is a critical backend step to ensure the security and privacy of the system.
+
+*   **Update Firestore Rules:** Refine the security rules to enforce the access control we've designed.
+    *   **Orders Collection:**
+        *   `allow read: if request.auth.uid == resource.data.userId || get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';` (Allow a user to read their own order, or if the user is an admin).
+        *   `allow create: if request.auth.uid != null;` (Allow any authenticated user to create an order).
+        *   `allow update: if get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';` (Allow only admins to update an order's status).
+    *   **Users Collection:**
+        *   `allow read, update: if request.auth.uid == resource.id || get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';` (Allow a user to read/update their own profile, or if the user is an admin).
+
+
+### **Prompt 5 of 5: Special Features, Global Polish, and Final Deployment Readiness**
+
+#### **1. About the Application (The Vision)**
+
+This is the final phase of development where we add the high-value features that differentiate "Camera World" from a generic e-commerce site. Our mission is to implement the dedicated sections for special offers and secondhand products, refine the global search to be more powerful, and conduct a final polish of the entire application to ensure it's responsive, performant, and secure. This prompt will tie all previously built components together into a cohesive, market-ready whole.
+
+#### **2. Rules of Development (The Guiding Principles)**
+
+Our established architectural principles remain in effect. The focus for this final phase is on **refinement, optimization, and completeness**.
+
+*   **Maximize Component Reuse:** The new pages for "Special Offers" and "Secondhand" products should not be built from scratch. They must be intelligent implementations of the Product Listing Page (PLP) component we built in Prompt 2, using different data queries to populate it. This is the ultimate test of our modular architecture.
+*   **Global Search Enhancement:** The goal is to make the search experience feel more integrated and powerful, breaking down the barriers between different product types.
+*   **Holistic User Experience Review:** Before concluding, we must step back and review the entire user journey—from a guest landing on the homepage, to an admin managing an order, to a customer checking their order status. The flow must be intuitive, seamless, and free of dead ends or confusing interactions.
+*   **Security as a Final Checkpoint:** We will conduct a final review of our Firestore security rules to ensure there are no loopholes and that all data is protected according to the principle of least privilege.
+
+#### **3. The Development to be Completed (This Prompt's Mission)**
+
+Your task is to implement the remaining special features and prepare the application for a real-world audience.
+
+**Part A: Implement Dedicated "Special Offers" and "Secondhand" Pages**
+Create curated sections that cater to specific customer interests.
+
+1.  **Special Offers Page (`/special-offers`):**
+    *   Create this new route and page.
+    *   **Logic:** This page will reuse the entire **Product Listing Page (PLP) component** (including its filters and sorting functionality). The key difference is the initial Firestore query. It must be pre-filtered to fetch only products where the `offerPrice` field exists and is a valid number.
+    *   **UI Nuance:** The `ProductCard` component, when used on this page, must prominently display the `offerPrice` as the current price and show the original `price` with a "strikethrough" style to visually emphasize the discount.
+
+2.  **Secondhand Products Page (`/secondhand`):**
+    *   Create this new route and page.
+    *   **Logic:** This page will also reuse the **PLP component**. The initial Firestore query will be pre-filtered to fetch only products where the `isSecondhand` boolean field is `true`.
+    *   **UI Nuance:** The `ProductCard` component must be enhanced with a conditional element. When displaying a secondhand product, it must show a prominent badge or label that clearly displays the product's `condition` (e.g., "Condition: Like New"). This information is critical for a customer's purchasing decision.
+
+**Part B: Enhance the Global Search and Filtering**
+Make finding the perfect product effortless.
+
+1.  **Unified Global Search:**
+    *   The global search bar in the header, when used, should take the user to the `/search` page as before.
+    *   **Enhancement:** The search results page must now include the filtering panel from the PLP. This allows a user to perform a broad search (e.g., "Canon") and *then* filter those results by category, price, or condition (New/Secondhand). This creates a much more powerful and useful search experience.
+    *   The logic must combine the search query with any active filters in the final Firestore query.
+
+2.  **"New/Secondhand" Filter on All Pages:**
+    *   Ensure the "New/Secondhand" filter toggle/checkbox is present on the main `/products` page and all `/category/:slug` pages. This gives users the ability to browse all products or a specific category and decide if they want to see new items, used items, or both.
+
+**Part C: Final Application Polish and Optimization**
+Review and refine the entire application for a professional finish.
+
+1.  **Responsive Design Audit:**
+    *   Systematically go through every single page and component of the application on various screen sizes (desktop, tablet, mobile).
+    *   Fix any layout issues, awkward text wrapping, or elements that are too large or small.
+    *   Pay special attention to forms and tables on mobile. Ensure all form fields are easily tappable and that tables reflow into a readable single-column card format.
+
+2.  **Empty States and Edge Cases:**
+    *   Review all pages that display lists of data (`/cart`, `/admin/orders`, `/profile/my-orders`, etc.).
+    *   Ensure every list has a well-designed "empty state." For example, the admin orders page should say "No new orders yet" if the list is empty, rather than just showing a blank space.
+    *   The cart page should have a clear message and a "Start Shopping" button when empty.
+
+3.  **Loading States and Perceived Performance:**
+    *   Ensure that every action that involves fetching data from Firestore (loading a product page, applying a filter, viewing orders) displays a clear loading indicator (like a skeleton screen or a spinner). This manages user expectation and makes the app feel more responsive, even on slower connections.
+
+**Part D: Final Security Rule Review and Deployment Readiness**
+Lock down the application and prepare it for launch.
+
+1.  **Comprehensive Firestore Security Rules Audit:**
+    *   Review the entire set of Firestore rules one last time.
+    *   Create a mental checklist:
+        *   Can a user read another user's profile or orders? (Should be NO)
+        *   Can a non-admin user write to the `products` or `categories` collections? (Should be NO)
+        *   Can a user create an order for another user? (Should be NO)
+        *   Can anyone update an order's status? (Should be NO, only admins)
+    *   The rules should be as restrictive as possible, granting permissions only where absolutely necessary. Set the default rule to `allow read, write: if false;` to ensure any collection not explicitly covered is protected.
+
+2.  **Environment Configuration:**
+    *   Ensure your Firebase configuration keys are handled securely, preferably using environment variables, so they are not hardcoded directly in the source code. This is a critical step before deploying the application.
+
+With the completion of this prompt, the "Camera World" application will be feature-complete, robust, secure, and fully aligned with the initial project vision. It will have a complete administrative backend, a dynamic customer-facing storefront, a full e-commerce transaction engine, and valuable user-centric features.

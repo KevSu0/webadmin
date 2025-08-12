@@ -2,6 +2,7 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Wifi, WifiOff, RefreshCw, AlertTriangle, CheckCircle, Minus, X, Move } from 'lucide-react';
 import { getConnectionStatus } from '../services/firebase';
+import { useMediaQuery } from '../hooks/useMediaQuery';
 
 interface NetworkStatusProps {
   showDetails?: boolean;
@@ -48,14 +49,19 @@ const NetworkStatusMonitor: React.FC<NetworkStatusProps> = ({
   const [isRetrying, setIsRetrying] = useState(false);
   const [showTooltip, setShowTooltip] = useState(false);
   
+  const isMobile = useMediaQuery('(max-width: 768px)');
+
   // Window state management
   const [windowState, setWindowState] = useState<WindowState>(() => {
     const saved = localStorage.getItem('networkMonitor-state');
-    return saved ? JSON.parse(saved) : {
-      isMinimized: false,
+    const initialState = saved ? JSON.parse(saved) : {
+      isMinimized: isMobile, // Minimized by default on mobile
       isVisible: true,
       position: { x: 16, y: 16 }
     };
+    // Ensure it's minimized on mobile on first load regardless of saved state
+    initialState.isMinimized = isMobile;
+    return initialState;
   });
   
   // Drag state

@@ -31,6 +31,7 @@ const Register: React.FC = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    console.log("Register form submitted");
     
     // Clear previous errors
     setFieldErrors({});
@@ -38,6 +39,7 @@ const Register: React.FC = () => {
     // Validate form
     const validation = validateRegistrationForm(formData);
     if (!validation.isValid) {
+      console.log("Form validation failed:", validation.errors);
       setFieldErrors(validation.errors);
       // Show first error as toast
       const firstError = Object.values(validation.errors)[0];
@@ -47,6 +49,7 @@ const Register: React.FC = () => {
       return;
     }
 
+    console.log("Form validation passed");
     setLoading(true);
     
     // Set a timeout to prevent infinite loading

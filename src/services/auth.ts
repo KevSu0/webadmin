@@ -1,34 +1,28 @@
-// Authentication service functions
+// Simplified Authentication service functions leveraging Firebase's native capabilities
 import {
   signInWithEmailAndPassword,
   createUserWithEmailAndPassword,
   signOut,
   sendPasswordResetEmail,
-  User as FirebaseUser
+  User as FirebaseUser,
+  fetchSignInMethodsForEmail
 } from 'firebase/auth';
 import { doc, setDoc, getDoc, serverTimestamp } from 'firebase/firestore';
-import { auth, db, getConnectionStatus, testConnection } from './firebase';
+import { auth, db } from './firebase';
 import { User, UserRegistration, UserRole, ApiResponse } from '../types';
-import { handleError, handleSuccess, createNetworkError } from '../utils/errorHandler';
+import { handleError } from '../utils/errorHandler';
 import { getFirebaseErrorMessage, validateEmail, validatePasswordStrength } from '../utils/authValidation';
 
 // Sign in with email and password
 export const signIn = async (email: string, password: string): Promise<FirebaseUser> => {
   try {
-    // Basic validation before attempting sign in
+    // Basic validation
     const emailValidation = validateEmail(email);
     if (!emailValidation.isValid) {
       throw new Error(emailValidation.message);
     }
-    
     if (!password) {
       throw new Error('Password is required');
-    }
-    
-    // Check connection status before attempting sign in
-    const connectionStatus = getConnectionStatus();
-    if (!connectionStatus.isOnline) {
-      throw createNetworkError(new Error('No internet connection. Please check your network and try again.'));
     }
     
     const result = await signInWithEmailAndPassword(auth, email, password);
@@ -36,60 +30,34 @@ export const signIn = async (email: string, password: string): Promise<FirebaseU
     return result.user;
   } catch (error: any) {
     console.error('Error signing in:', error);
-    
-    // Handle network errors
-    if (error.code === 'network-request-failed' || error.message.includes('network')) {
-      console.warn('Network error detected during sign in');
-    }
-    
-    // Create user-friendly error message
-    const friendlyMessage = error.code ? getFirebaseErrorMessage(error.code) : error.message;
+    const friendlyMessage = getFirebaseErrorMessage(error.code, 'Sign-in failed. Please check your credentials.');
     const enhancedError = new Error(friendlyMessage);
     enhancedError.name = error.code || 'SignInError';
-    
     throw enhancedError;
   }
 };
 
-// Register new user with retry logic
-export const registerUser = async (userData: UserRegistration, retryCount = 0): Promise<FirebaseUser> => {
-  const MAX_RETRIES = 3;
-  const RETRY_DELAY = 2000;
-  
+// Register new user
+export const registerUser = async (userData: UserRegistration): Promise<FirebaseUser> => {
   try {
     console.log('Attempting to register user:', userData.email);
-    
-    // Check connection status before attempting registration
-    const connectionStatus = getConnectionStatus();
-    if (!connectionStatus.isOnline) {
-      throw createNetworkError(new Error('No internet connection. Please check your network and try again.'));
-    }
-    
+
     // Validate input data
     const emailValidation = validateEmail(userData.email);
-    if (!emailValidation.isValid) {
-      throw new Error(emailValidation.message);
-    }
-    
+    if (!emailValidation.isValid) throw new Error(emailValidation.message);
+
     const passwordValidation = validatePasswordStrength(userData.password);
-    if (!passwordValidation.isValid) {
-      throw new Error(passwordValidation.feedback[0] || 'Password does not meet requirements');
-    }
-    
+    if (!passwordValidation.isValid) throw new Error(passwordValidation.feedback[0] || 'Password does not meet requirements');
+
     if (!userData.displayName || userData.displayName.trim().length < 2) {
       throw new Error('Full name must be at least 2 characters long');
     }
     
     // Create Firebase Auth user
-    const result = await createUserWithEmailAndPassword(
-      auth,
-      userData.email,
-      userData.password
-    );
-    
+    const result = await createUserWithEmailAndPassword(auth, userData.email, userData.password);
     console.log('Firebase Auth user created successfully:', result.user.uid);
 
-    // Create user document in Firestore with retry logic
+    // Create user document in Firestore
     await createUserDocument(result.user.uid, {
       email: userData.email,
       displayName: userData.displayName.trim(),
@@ -103,134 +71,47 @@ export const registerUser = async (userData: UserRegistration, retryCount = 0): 
     return result.user;
   } catch (error: any) {
     console.error('Error registering user:', error);
-    
-    // Handle network/connection errors with retry
-    const networkErrorCodes = ['unavailable', 'network-request-failed', 'timeout', 'cancelled'];
-    const isNetworkError = networkErrorCodes.includes(error.code) || error.message.includes('offline') || error.message.includes('network');
-    
-    if (isNetworkError && retryCount < MAX_RETRIES) {
-      console.log(`Retrying user registration (${retryCount + 1}/${MAX_RETRIES})...`);
-      
-      if (retryCount < MAX_RETRIES) {
-        return new Promise((resolve, reject) => {
-          setTimeout(async () => {
-            try {
-              const result = await registerUser(userData, retryCount + 1);
-              resolve(result);
-            } catch (retryError) {
-              reject(retryError);
-            }
-          }, RETRY_DELAY * (retryCount + 1));
-        });
-      }
-    }
-    
-    // Create user-friendly error message
-    const friendlyMessage = error.code ? getFirebaseErrorMessage(error.code) : error.message;
+    const friendlyMessage = getFirebaseErrorMessage(error.code, 'Registration failed. Please try again.');
     const enhancedError = new Error(friendlyMessage);
     enhancedError.name = error.code || 'RegistrationError';
-    
     handleError(enhancedError, 'user registration');
     throw enhancedError;
   }
 };
 
-// Helper function to create user document with retry logic
-const createUserDocument = async (uid: string, userData: any, retryCount = 0): Promise<void> => {
-  const MAX_RETRIES = 3;
-  const RETRY_DELAY = 1000;
-  
+// Helper function to create user document in Firestore
+const createUserDocument = async (uid: string, userData: any): Promise<void> => {
   try {
-    // Check connection status before attempting to create document
-    const connectionStatus = getConnectionStatus();
-    if (!connectionStatus.isOnline) {
-      throw createNetworkError(new Error('No internet connection. Unable to create user profile.'));
-    }
-    
     await setDoc(doc(db, 'users', uid), userData);
     console.log('User document created in Firestore');
   } catch (error: any) {
     console.error('Error creating user document:', error);
-    
-    // Handle network errors with enhanced retry logic
-    const networkErrorCodes = ['unavailable', 'network-request-failed', 'timeout', 'cancelled'];
-    const isNetworkError = networkErrorCodes.includes(error.code) || error.message.includes('offline') || error.message.includes('network');
-    
-    if (isNetworkError && retryCount < MAX_RETRIES) {
-      console.log(`Retrying user document creation (${retryCount + 1}/${MAX_RETRIES})...`);
-      
-      // Wait before retrying
-      
-      return new Promise((resolve, reject) => {
-        setTimeout(async () => {
-          try {
-            await createUserDocument(uid, userData, retryCount + 1);
-            resolve();
-          } catch (retryError) {
-            reject(retryError);
-          }
-        }, RETRY_DELAY * (retryCount + 1));
-      });
-    }
-    
-    throw error;
+    // This will be caught by the calling function (registerUser)
+    throw new Error('Failed to create user profile. Please try again.');
   }
 };
 
-// Get user data from Firestore with retry logic
-export const getUserData = async (uid: string, retryCount = 0): Promise<User | null> => {
-  const MAX_RETRIES = 3;
-  const RETRY_DELAY = 1000;
-  
+// Get user data from Firestore.
+// Firestore's offline cache will handle this seamlessly when offline.
+export const getUserData = async (uid: string): Promise<User | null> => {
   try {
-    // Check connection status before attempting to fetch data
-    const connectionStatus = getConnectionStatus();
-    if (!connectionStatus.isOnline && retryCount === 0) {
-      console.warn('Offline - attempting to fetch user data from cache');
-    }
-    
-    const userDoc = await getDoc(doc(db, 'users', uid));
+    const userDocRef = doc(db, 'users', uid);
+    const userDoc = await getDoc(userDocRef);
     
     if (userDoc.exists()) {
-      const userData = userDoc.data();
-      return {
-        uid,
-        ...userData
-      } as User;
+      return { uid, ...userDoc.data() } as User;
     }
     
+    console.warn(`User document not found for UID: ${uid}`);
     return null;
   } catch (error: any) {
     console.error('Error fetching user data:', error);
-    
-    // Handle network errors with enhanced retry logic
-    const networkErrorCodes = ['unavailable', 'network-request-failed', 'timeout', 'cancelled'];
-    const isNetworkError = networkErrorCodes.includes(error.code) || error.message.includes('offline') || error.message.includes('network');
-    
-    if (isNetworkError && retryCount < MAX_RETRIES) {
-      console.log(`Retrying user data fetch (${retryCount + 1}/${MAX_RETRIES})...`);
-      
-      // Test connection before retrying
-      await testConnection();
-      
-      return new Promise((resolve, reject) => {
-        setTimeout(async () => {
-          try {
-            const result = await getUserData(uid, retryCount + 1);
-            resolve(result);
-          } catch (retryError) {
-            reject(retryError);
-          }
-        }, RETRY_DELAY * (retryCount + 1));
-      });
+    // Don't throw network errors if offline, let the cache handle it.
+    // Re-throw other critical errors.
+    if (error.code !== 'unavailable') {
+      throw new Error('Could not fetch user data.');
     }
-    
-    // If we're offline and have exhausted retries, throw a more user-friendly error
-    if (!getConnectionStatus().isOnline) {
-      throw createNetworkError(new Error('Unable to fetch user data. Please check your internet connection and try again.'));
-    }
-    
-    throw error;
+    return null; // Return null on network error, UI should handle this state.
   }
 };
 
@@ -270,44 +151,24 @@ export const verifyAdminAccess = async (uid: string): Promise<ApiResponse<UserRo
     const userRole = await getUserRole(uid);
     
     if (!userRole) {
-      return {
-        success: false,
-        error: 'User not found',
-        message: 'Unable to verify user credentials'
-      };
+      return { success: false, error: 'User not found', message: 'Unable to verify user credentials' };
     }
     
     if (userRole.role !== 'admin') {
-      return {
-        success: false,
-        error: 'Access denied',
-        message: 'Admin privileges required'
-      };
+      return { success: false, error: 'Access denied', message: 'Admin privileges required' };
     }
     
-    return {
-      success: true,
-      data: userRole,
-      message: 'Admin access verified'
-    };
+    return { success: true, data: userRole, message: 'Admin access verified' };
   } catch (error) {
     console.error('Error verifying admin access:', error);
-    return {
-      success: false,
-      error: 'Verification failed',
-      message: 'Unable to verify admin access'
-    };
+    return { success: false, error: 'Verification failed', message: 'Unable to verify admin access' };
   }
 };
 
 // Create admin user (for initial setup)
 export const createAdminUser = async (userData: UserRegistration): Promise<ApiResponse<FirebaseUser>> => {
   try {
-    const result = await createUserWithEmailAndPassword(
-      auth,
-      userData.email,
-      userData.password
-    );
+    const result = await createUserWithEmailAndPassword(auth, userData.email, userData.password);
 
     // Create admin user document in Firestore
     await setDoc(doc(db, 'users', result.user.uid), {
@@ -319,18 +180,11 @@ export const createAdminUser = async (userData: UserRegistration): Promise<ApiRe
       createdAt: serverTimestamp()
     });
 
-    return {
-      success: true,
-      data: result.user,
-      message: 'Admin user created successfully'
-    };
-  } catch (error) {
+    return { success: true, data: result.user, message: 'Admin user created successfully' };
+  } catch (error: any) {
     console.error('Error creating admin user:', error);
-    return {
-      success: false,
-      error: error instanceof Error ? error.message : 'Unknown error',
-      message: 'Failed to create admin user'
-    };
+    const message = getFirebaseErrorMessage(error.code, 'Failed to create admin user.');
+    return { success: false, error: error.code || 'AdminCreationError', message };
   }
 };
 
@@ -340,64 +194,50 @@ export const logout = async (): Promise<void> => {
     await signOut(auth);
   } catch (error) {
     console.error('Error signing out:', error);
-    throw error;
+    throw new Error('Failed to sign out. Please try again.');
   }
 };
 
 // Update user profile
 export const updateUserProfile = async (uid: string, updates: Partial<User>): Promise<void> => {
   try {
-    await setDoc(doc(db, 'users', uid), updates, { merge: true });
-  } catch (error) {
+    const userDocRef = doc(db, 'users', uid);
+    await setDoc(userDocRef, updates, { merge: true });
+  } catch (error: any) {
     console.error('Error updating user profile:', error);
-    throw error;
+    throw new Error('Failed to update profile. Please try again.');
   }
 };
 
 // Send password reset email
 export const sendPasswordReset = async (email: string): Promise<ApiResponse<void>> => {
   try {
-    // Validate email format
     const emailValidation = validateEmail(email);
     if (!emailValidation.isValid) {
-      return {
-        success: false,
-        error: 'Invalid email',
-        message: emailValidation.message!
-      };
+      return { success: false, error: 'Invalid email', message: emailValidation.message! };
     }
     
     await sendPasswordResetEmail(auth, email);
     
     return {
       success: true,
-      message: 'Password reset email sent successfully. Please check your inbox and follow the instructions to reset your password.'
+      message: 'Password reset email sent successfully. Please check your inbox.'
     };
   } catch (error: any) {
     console.error('Error sending password reset email:', error);
-    
-    const friendlyMessage = error.code ? getFirebaseErrorMessage(error.code) : 'Failed to send password reset email';
-    
-    return {
-      success: false,
-      error: error.code || 'PasswordResetError',
-      message: friendlyMessage
-    };
+    const friendlyMessage = getFirebaseErrorMessage(error.code, 'Failed to send password reset email.');
+    return { success: false, error: error.code || 'PasswordResetError', message: friendlyMessage };
   }
 };
 
-// Check if email exists (for better UX)
+// Check if email exists using modern Firebase method
 export const checkEmailExists = async (email: string): Promise<boolean> => {
   try {
-    // This is a workaround since Firebase doesn't provide a direct way to check if email exists
-    // We'll try to send a password reset email and catch the error
-    await sendPasswordResetEmail(auth, email);
-    return true;
-  } catch (error: any) {
-    if (error.code === 'auth/user-not-found') {
-      return false;
-    }
-    // For other errors, assume email exists to avoid revealing information
+    const methods = await fetchSignInMethodsForEmail(auth, email);
+    return methods.length > 0;
+  } catch (error) {
+    console.error('Error checking if email exists:', error);
+    // In case of error, assume it exists to prevent user from getting stuck.
     return true;
   }
 };

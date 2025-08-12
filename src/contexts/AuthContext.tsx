@@ -1,9 +1,9 @@
-// Ultra-simplified Authentication context - NO persistent listeners
-import React, { createContext, useContext, useEffect, useState, ReactNode } from 'react';
-import { User as FirebaseUser, signOut } from 'firebase/auth';
-import { doc, getDoc, Timestamp } from 'firebase/firestore';
+// Authentication context using real-time Firebase listeners
+import React, { createContext, useContext, useEffect, useState, ReactNode, useCallback } from 'react';
+import { User as FirebaseUser, onAuthStateChanged } from 'firebase/auth';
 import { auth, db } from '../services/firebase';
 import { User } from '../types';
+import { getUserData, logout as signOutUser } from '../services/auth';
 
 interface AuthContextType {
   currentUser: User | null;
@@ -12,7 +12,6 @@ interface AuthContextType {
   error: string | null;
   logout: () => Promise<void>;
   refetchUser: () => Promise<void>;
-  checkAuthState: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -35,110 +34,82 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  const logout = async () => {
+  const fetchUserData = useCallback(async (user: FirebaseUser) => {
+    setLoading(true);
+    setError(null);
     try {
-      await signOut(auth);
-      setCurrentUser(null);
-      setFirebaseUser(null);
-      setError(null);
-    } catch (error) {
-      console.error('Error signing out:', error);
-      throw error;
-    }
-  };
-
-  // Ultra-simple user data fetch - no timeouts or complex logic
-  const fetchUserData = async (firebaseUser: FirebaseUser): Promise<void> => {
-    try {
-      setError(null);
-      console.log(`🔍 Fetching user data for UID: ${firebaseUser.uid}`);
-      
-      // Direct Firestore get() call - no timeout wrapper
-      const userDocRef = doc(db, 'users', firebaseUser.uid);
-      const userDoc = await getDoc(userDocRef);
-      
-      if (userDoc.exists()) {
-        const userData = userDoc.data() as Omit<User, 'uid'>;
-        const user = {
-          uid: firebaseUser.uid,
-          ...userData
-        };
-        
-        setCurrentUser(user);
+      console.log(`🔍 Fetching user data for UID: ${user.uid}`);
+      const userData = await getUserData(user.uid);
+      if (userData) {
+        setCurrentUser(userData);
         console.log('✅ User data fetched successfully');
       } else {
-        console.warn('📄 User document not found in Firestore');
-        // Create basic user object from Firebase auth data
+        console.warn('📄 User document not found in Firestore. Creating a basic user profile.');
+        // This can happen if user registration was interrupted.
+        // We create a basic profile to ensure the app doesn't crash.
         const basicUser: User = {
-          uid: firebaseUser.uid,
-          email: firebaseUser.email || '',
-          displayName: firebaseUser.displayName || '',
-          phone: '',
-          role: 'customer', // Default role
+          uid: user.uid,
+          email: user.email || '',
+          displayName: user.displayName || 'New User',
+          phone: user.phoneNumber || '',
+          role: 'customer',
           addresses: [],
-          status: 'active',
-          createdAt: Timestamp.now(),
-          updatedAt: Timestamp.now()
         };
         setCurrentUser(basicUser);
       }
-    } catch (error: any) {
-      console.error('❌ Error fetching user data:', error);
-      
-      // Fallback: create basic user from Firebase auth
-      const basicUser: User = {
-        uid: firebaseUser.uid,
-        email: firebaseUser.email || '',
-        displayName: firebaseUser.displayName || '',
-        phone: '',
+    } catch (err) {
+      console.error('❌ Error fetching user data:', err);
+      setError('Failed to load user profile.');
+      // Fallback to prevent app crash
+      setCurrentUser({
+        uid: user.uid,
+        email: user.email || '',
+        displayName: 'Error Loading Profile',
         role: 'customer',
         addresses: [],
-        status: 'active',
-        createdAt: Timestamp.now(),
-        updatedAt: Timestamp.now()
-      };
-      setCurrentUser(basicUser);
-      setError(null); // Don't show error, use fallback
-    }
-  };
-  
-  // Manual refetch function
-  const refetchUser = async (): Promise<void> => {
-    if (firebaseUser) {
-      setLoading(true);
-      await fetchUserData(firebaseUser);
-      setLoading(false);
-    }
-  };
-  
-  // Manual auth state check - NO persistent listeners
-  const checkAuthState = async (): Promise<void> => {
-    try {
-      setLoading(true);
-      const firebaseUser = auth.currentUser;
-      console.log('🔍 Manual auth check:', firebaseUser ? `User ${firebaseUser.uid}` : 'No user');
-      
-      setFirebaseUser(firebaseUser);
-      
-      if (firebaseUser) {
-        await fetchUserData(firebaseUser);
-      } else {
-        setCurrentUser(null);
-        setError(null);
-      }
-    } catch (error) {
-      console.error('Manual auth check error:', error);
-      setCurrentUser(null);
-      setError('Authentication check failed');
+      });
     } finally {
       setLoading(false);
     }
-  };
-  
-  // Simple one-time auth check on mount - NO listeners
-  useEffect(() => {
-    checkAuthState();
   }, []);
+
+  const refetchUser = useCallback(async () => {
+    if (firebaseUser) {
+      await fetchUserData(firebaseUser);
+    }
+  }, [firebaseUser, fetchUserData]);
+
+  const logout = async () => {
+    try {
+      await signOutUser();
+      // onAuthStateChanged will handle the state updates
+    } catch (error) {
+      console.error('Error signing out:', error);
+      setError('Failed to sign out.');
+    }
+  };
+
+  useEffect(() => {
+    console.log('Setting up auth state listener...');
+    const unsubscribe = onAuthStateChanged(auth, async (user) => {
+      console.log('Auth state changed. User:', user ? user.uid : 'null');
+      setFirebaseUser(user);
+      
+      if (user) {
+        await fetchUserData(user);
+      } else {
+        setCurrentUser(null);
+        setLoading(false);
+        setError(null);
+      }
+    });
+
+    // Cleanup subscription on unmount
+    return () => {
+      console.log('Cleaning up auth state listener.');
+      unsubscribe();
+    };
+  }, [fetchUserData]);
 
   const value: AuthContextType = {
     currentUser,
@@ -147,7 +118,6 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     error,
     logout,
     refetchUser,
-    checkAuthState
   };
 
   return (

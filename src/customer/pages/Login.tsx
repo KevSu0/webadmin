@@ -15,7 +15,7 @@ const Login: React.FC = () => {
   const [showForgotPassword, setShowForgotPassword] = useState(false);
   const [resetLoading, setResetLoading] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
-  const { currentUser, checkAuthState } = useAuth();
+  const { currentUser } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
   const from = location.state?.from?.pathname || '/customer/dashboard';
@@ -42,9 +42,6 @@ const Login: React.FC = () => {
     try {
       const user = await signIn(email, password);
       console.log('Sign in successful:', user.uid);
-      
-      // Manually update auth state after successful login
-      await checkAuthState();
       
       toast.success('Welcome back!');
       navigate(from, { replace: true });

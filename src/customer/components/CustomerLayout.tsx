@@ -27,7 +27,7 @@ const CustomerLayout: React.FC<CustomerLayoutProps> = ({ children }) => {
       await logout();
       toast.success('Logged out successfully');
       navigate('/');
-    } catch (error) {
+    } catch (_error) {
       toast.error('Error logging out');
     }
   };

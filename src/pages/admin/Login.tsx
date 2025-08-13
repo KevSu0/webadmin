@@ -60,8 +60,9 @@ const AdminLogin: React.FC = () => {
 
       toast.success('Welcome back, Admin!');
       navigate('/admin/dashboard');
-    } catch (error: any) {
-      const errorMessage = error.message || 'Login failed. Please try again';
+    } catch (error) {
+      const err = error as { message?: string, code?: string };
+      const errorMessage = err.message || 'Login failed. Please try again';
       
       setError(errorMessage);
       toast.error(errorMessage);
@@ -93,8 +94,9 @@ const AdminLogin: React.FC = () => {
       } else {
         toast.error(result.message!);
       }
-    } catch (error: any) {
-      toast.error('Failed to send password reset email');
+    } catch (error) {
+      const err = error as { message?: string };
+      toast.error(err.message || 'Failed to send password reset email');
     } finally {
       setResetLoading(false);
     }

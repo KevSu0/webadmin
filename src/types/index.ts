@@ -1,5 +1,5 @@
 // TypeScript interfaces for Camera World e-commerce platform
-import { Timestamp } from 'firebase/firestore';
+import { Timestamp, FieldValue } from 'firebase/firestore';
 
 // User interfaces
 export interface User {
@@ -10,8 +10,8 @@ export interface User {
   role: 'admin' | 'customer';
   addresses: Address[];
   status: 'active' | 'inactive' | 'suspended';
-  createdAt: Timestamp;
-  updatedAt?: Timestamp;
+  createdAt: Timestamp | FieldValue;
+  updatedAt?: Timestamp | FieldValue;
 }
 
 export interface UserRegistration {

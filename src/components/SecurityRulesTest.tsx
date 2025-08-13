@@ -37,7 +37,7 @@ const SecurityRulesTest: React.FC = () => {
       } else {
         toast.error('Quick security check failed - check console for details');
       }
-    } catch (error: any) {
+    } catch (error) {
       console.error('Quick check error:', error);
       toast.error('Quick security check failed');
       setQuickCheckResult(false);
@@ -60,7 +60,7 @@ const SecurityRulesTest: React.FC = () => {
       } else {
         toast.warning(`Security test completed with ${results.failed} issues`);
       }
-    } catch (error: any) {
+    } catch (error) {
       console.error('Security test error:', error);
       toast.error('Security rules test failed - check console for details');
     } finally {

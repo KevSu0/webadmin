@@ -45,15 +45,16 @@ const Login: React.FC = () => {
       
       toast.success('Welcome back!');
       navigate(from, { replace: true });
-    } catch (error: any) {
+    } catch (error) {
       console.error('Login error:', error);
-      toast.error(error.message || 'Login failed');
-      
-      // Set field-specific errors if applicable
-      if (error.message.includes('email')) {
-        setErrors({ email: error.message });
-      } else if (error.message.includes('password')) {
-        setErrors({ password: error.message });
+      const err = error as { message?: string };
+      toast.error(err.message || 'Login failed');
+      if (err.message?.includes('email')) {
+        setErrors({ email: err.message });
+      } else if (err.message?.includes('password')) {
+        setErrors({ password: err.message });
+      } else {
+        setErrors({ email: err.message || 'Login failed' });
       }
     } finally {
       setLoading(false);
@@ -76,7 +77,7 @@ const Login: React.FC = () => {
       } else {
         toast.error(result.message!);
       }
-    } catch (error: any) {
+    } catch (_error) {
       toast.error('Failed to send password reset email');
     } finally {
       setResetLoading(false);

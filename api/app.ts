@@ -2,16 +2,12 @@
  * This is a API server
  */
 
-import express, { type Request, type Response, type NextFunction }  from 'express';
+import express, { type Request, type Response }  from 'express';
 import cors from 'cors';
-import path from 'path';
 import dotenv from 'dotenv';
-import { fileURLToPath } from 'url';
 import authRoutes from './routes/auth.js';
-
-// for esm mode
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
+import productRoutes from './routes/products.js';
+import orderRoutes from './routes/orders.js';
 
 // load env
 dotenv.config();
@@ -27,11 +23,13 @@ app.use(express.urlencoded({ extended: true, limit: '10mb' }));
  * API Routes
  */
 app.use('/api/auth', authRoutes);
+app.use('/api/products', productRoutes);
+app.use('/api/orders', orderRoutes);
 
 /**
  * health
  */
-app.use('/api/health', (req: Request, res: Response, next: NextFunction): void => {
+app.use('/api/health', (req: Request, res: Response): void => {
   res.status(200).json({
     success: true,
     message: 'ok'
@@ -41,7 +39,7 @@ app.use('/api/health', (req: Request, res: Response, next: NextFunction): void =
 /**
  * error handler middleware
  */
-app.use((error: Error, req: Request, res: Response, next: NextFunction) => {
+app.use((error: Error, req: Request, res: Response) => {
   res.status(500).json({
     success: false,
     error: 'Server internal error'

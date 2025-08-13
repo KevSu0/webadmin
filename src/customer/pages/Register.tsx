@@ -18,7 +18,6 @@ const Register: React.FC = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
-  const [loadingTimeout, setLoadingTimeout] = useState<NodeJS.Timeout | null>(null);
   const [showEmailExistsOptions, setShowEmailExistsOptions] = useState(false);
   const navigate = useNavigate();
 
@@ -52,14 +51,6 @@ const Register: React.FC = () => {
     console.log("Form validation passed");
     setLoading(true);
     
-    // Set a timeout to prevent infinite loading
-    const timeout = setTimeout(() => {
-      setLoading(false);
-      toast.error('Registration is taking too long. Please try again.');
-    }, 30000); // 30 seconds timeout
-    
-    setLoadingTimeout(timeout);
-
     try {
       await registerUser({
         email: formData.email,
@@ -68,15 +59,11 @@ const Register: React.FC = () => {
         phone: formData.phone
       });
       
-      clearTimeout(timeout);
-      setLoadingTimeout(null);
       toast.success('Registration successful! Welcome to Camera World!');
       navigate('/customer/dashboard');
-    } catch (error: any) {
-      clearTimeout(timeout);
-      setLoadingTimeout(null);
+    } catch (error) {
       console.error('Registration error:', error);
-      
+      const err = error as { code?: string; message?: string };
       // Handle email already in use scenario
       if (error.code === 'auth/email-already-in-use') {
         setFieldErrors({ email: 'This email is already registered' });
@@ -84,6 +71,7 @@ const Register: React.FC = () => {
         toast.error('This email is already registered. Please sign in or use a different email.');
       } else {
         toast.error(error.message || 'Registration failed. Please try again.');
+        setFieldErrors({ displayName: error.message });
       }
     } finally {
       setLoading(false);

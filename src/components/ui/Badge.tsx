@@ -1,30 +1,40 @@
-import React from "react"
-import { cn } from "@/lib/utils"
+import * as React from "react";
+import { cva, type VariantProps } from "class-variance-authority";
 
-export type BadgeVariant = "info" | "success" | "warning" | "error"
+import { cn } from "@/lib/utils";
 
-export interface BadgeProps extends React.HTMLAttributes<HTMLSpanElement> {
-  variant?: BadgeVariant
-}
+const badgeVariants = cva(
+  "inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold transition-colors focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2",
+  {
+    variants: {
+      variant: {
+        default:
+          "border-transparent bg-primary text-primary-foreground hover:bg-primary/80",
+        secondary:
+          "border-transparent bg-secondary text-secondary-foreground hover:bg-secondary/80",
+        destructive:
+          "border-transparent bg-error text-error-foreground hover:bg-error/80",
+        outline: "text-foreground",
+        success:
+          "border-transparent bg-success text-success-foreground hover:bg-success/80",
+        reward:
+          "border-transparent bg-reward text-reward-foreground hover:bg-reward/80",
+      },
+    },
+    defaultVariants: {
+      variant: "default",
+    },
+  }
+);
 
-const variantStyles: Record<BadgeVariant, string> = {
-  info: "bg-info text-white",
-  success: "bg-success text-white",
-  warning: "bg-warning text-white",
-  error: "bg-error text-white",
-}
+export interface BadgeProps
+  extends React.HTMLAttributes<HTMLDivElement>,
+    VariantProps<typeof badgeVariants> {}
 
-export const Badge = ({ className, variant = "info", ...props }: BadgeProps) => {
+function Badge({ className, variant, ...props }: BadgeProps) {
   return (
-    <span
-      className={cn(
-        "inline-flex items-center rounded-xl px-2 py-1 text-xs font-medium",
-        variantStyles[variant],
-        className
-      )}
-      {...props}
-    />
-  )
+    <div className={cn(badgeVariants({ variant }), className)} {...props} />
+  );
 }
 
-export default Badge
+export { Badge, badgeVariants };

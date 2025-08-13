@@ -1,5 +1,6 @@
 /** @type {import('tailwindcss').Config} */
-import defaultTheme from "tailwindcss/defaultTheme"
+import defaultTheme from "tailwindcss/defaultTheme";
+import { designTokens } from "./src/lib/design-tokens";
 
 export default {
   darkMode: "class",
@@ -14,32 +15,25 @@ export default {
     },
     extend: {
       colors: {
-        primary: {
-          DEFAULT: "#6366F1",
-          foreground: "#FFFFFF",
-        },
-        secondary: {
-          DEFAULT: "#EC4899",
-          foreground: "#FFFFFF",
-        },
-        accent: {
-          DEFAULT: "#F59E0B",
-          foreground: "#FFFFFF",
-        },
-        success: "#10B981",
-        error: "#EF4444",
-        warning: "#FBBF24",
-        info: "#3B82F6",
+        ...designTokens.colors,
       },
       fontFamily: {
-        sans: ["Inter", ...defaultTheme.fontFamily.sans],
-        heading: ["Poppins", ...defaultTheme.fontFamily.sans],
+        sans: [designTokens.typography.fontFamily.sans, ...defaultTheme.fontFamily.sans],
+        heading: [designTokens.typography.fontFamily.heading, ...defaultTheme.fontFamily.sans],
+      },
+      fontSize: {
+        ...designTokens.typography.fontSize,
+      },
+      fontWeight: {
+        ...designTokens.typography.fontWeight,
+      },
+      spacing: {
+        ...designTokens.spacing,
       },
       borderRadius: {
-        xl: "1rem",
-        "2xl": "1.5rem",
+        ...designTokens.radii,
       },
     },
   },
-  plugins: [],
+  plugins: [require("tailwindcss-animate")],
 };

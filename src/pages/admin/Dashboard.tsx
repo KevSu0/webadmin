@@ -95,7 +95,7 @@ const AdminDashboard: React.FC = () => {
       await logout();
       toast.success('Logged out successfully');
       navigate('/admin/login');
-    } catch (error) {
+    } catch (_error) {
       toast.error('Error logging out');
     }
   };

@@ -25,7 +25,7 @@ const AdminLayout: React.FC<AdminLayoutProps> = ({ children }) => {
       await logout();
       toast.success('Logged out successfully');
       navigate('/admin/login');
-    } catch (error) {
+    } catch (_error) {
       toast.error('Error logging out');
     }
   };

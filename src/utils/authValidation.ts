@@ -141,42 +141,6 @@ export const validatePhone = (phone: string): ValidationResult => {
   return { isValid: true };
 };
 
-// Firebase Auth error mapping
-export const getFirebaseErrorMessage = (errorCode: string): string => {
-  const errorMessages: Record<string, string> = {
-    // Authentication errors
-    'auth/invalid-credential': 'Invalid email or password. Please check your credentials and try again.',
-    'auth/user-not-found': 'No account found with this email address. Please check your email or create a new account.',
-    'auth/wrong-password': 'Incorrect password. Please try again or reset your password.',
-    'auth/invalid-email': 'Please enter a valid email address.',
-    'auth/user-disabled': 'This account has been disabled. Please contact support for assistance.',
-    'auth/too-many-requests': 'Too many failed login attempts. Please wait a few minutes before trying again.',
-    
-    // Registration errors
-    'auth/email-already-in-use': 'An account with this email already exists. Please sign in instead or use a different email.',
-    'auth/weak-password': 'Password is too weak. Please choose a stronger password with at least 8 characters.',
-    'auth/operation-not-allowed': 'Email/password accounts are not enabled. Please contact support.',
-    
-    // Network errors
-    'auth/network-request-failed': 'Network error. Please check your internet connection and try again.',
-    'auth/timeout': 'Request timed out. Please try again.',
-    
-    // General errors
-    'auth/invalid-api-key': 'Configuration error. Please contact support.',
-    'auth/app-deleted': 'Application error. Please contact support.',
-    'auth/invalid-user-token': 'Your session has expired. Please sign in again.',
-    'auth/user-token-expired': 'Your session has expired. Please sign in again.',
-    'auth/null-user': 'No user is currently signed in.',
-    'auth/requires-recent-login': 'This operation requires recent authentication. Please sign in again.',
-    
-    // Custom errors
-    'auth/admin-restricted': 'Access denied. Admin privileges are required to access this area.',
-    'auth/customer-restricted': 'This area is restricted to customers only.'
-  };
-  
-  return errorMessages[errorCode] || 'An unexpected error occurred. Please try again or contact support if the problem persists.';
-};
-
 // Get password strength color and text
 export const getPasswordStrengthDisplay = (strength: PasswordStrength): { color: string; text: string; bgColor: string } => {
   if (strength.score === 0) {

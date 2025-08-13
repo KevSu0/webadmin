@@ -100,15 +100,12 @@ export const getProduct = async (productId: string): Promise<Product | null> => 
 // Search products by name or description with offline support
 export const searchProducts = async (searchTerm: string): Promise<Product[]> => {
   try {
-    // Note: This is a basic implementation. For better search,
-    // consider using Algolia or similar search service
-    const products = await getCollectionData<Product>('products');
-    const searchLower = searchTerm.toLowerCase();
-    
-    return products.filter(product => 
-      product.name.toLowerCase().includes(searchLower) ||
-      product.description.toLowerCase().includes(searchLower)
-    );
+    const response = await fetch(`/api/products/search?term=${searchTerm}`);
+    if (!response.ok) {
+        throw new Error('Failed to search products');
+    }
+    const result = await response.json();
+    return result.data;
   } catch (error) {
     console.error('Error searching products:', error);
     throw error;

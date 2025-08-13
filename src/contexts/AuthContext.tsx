@@ -2,7 +2,7 @@
 import React, { createContext, useContext, useEffect, useState, ReactNode, useCallback } from 'react';
 import { User as FirebaseUser, onAuthStateChanged } from 'firebase/auth';
 import { Timestamp } from 'firebase/firestore';
-import { auth, db } from '../services/firebase';
+import { auth } from '../services/firebase';
 import { User } from '../types';
 import { getUserData, logout as signOutUser } from '../services/auth';
 

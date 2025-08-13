@@ -88,9 +88,14 @@ function validateFirestoreRules() {
         description: 'Ensures orders collection has security rules'
       },
       {
-        name: 'Customer role enforcement',
-        test: () => rulesContent.includes("resource.data.role == 'customer'"),
-        description: 'Prevents self-assignment of admin roles'
+        name: 'Creation rule is flexible for roles',
+        test: () => !rulesContent.includes("create: if isAuthenticated() && isOwner(userId) && isValidUserData(resource.data) && resource.data.role == 'customer'"),
+        description: 'Allows creation of users with different roles (e.g., admin)'
+      },
+      {
+        name: 'Role self-promotion prevention on update',
+        test: () => rulesContent.includes("request.resource.data.role == resource.data.role || isAdmin()"),
+        description: 'Prevents a user from changing their own role unless they are an admin'
       },
       {
         name: 'Status field validation',

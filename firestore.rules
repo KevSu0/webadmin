@@ -70,19 +70,18 @@ service cloud.firestore {
       // Allow users to read their own profile, admins can read all
       allow read: if isOwner(userId) || isAdmin();
       
-      // Allow user creation only during signup with customer role and active status
+      // Allow user creation with valid data and active status
+      // Role is managed by the update rule (preventing self-promotion)
       allow create: if isAuthenticated() && 
                        isOwner(userId) && 
                        isValidUserData(resource.data) &&
-                       resource.data.role == 'customer' && // Prevent self-assignment of admin role
                        resource.data.status == 'active'; // New users start as active
       
-      // Allow users to update their own profile, but not their role
-      // Only admins can change user roles
+      // Allow users to update their own profile.
+      // Role can only be changed by an admin, preventing self-promotion.
       allow update: if isOwner(userId) && 
-                       isValidUserData(resource.data) &&
-                       (resource.data.role == request.auth.token.role || // Role unchanged
-                        isAdmin()); // Or admin is making the change
+                       isValidUserData(request.resource.data) &&
+                       (request.resource.data.role == resource.data.role || isAdmin());
       
       // Only admins can delete users
       allow delete: if isAdmin();

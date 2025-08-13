@@ -1,97 +1,99 @@
-# Firestore Schema Design
+# Firestore Schema: Camera World E-commerce
 
-This document outlines the Firestore database schema for the application, designed for scalability, security, and efficient querying.
-
-## Schema Diagram
-
-```mermaid
-graph TD
-    subgraph "Firestore Collections"
-        Users("users/{userId}")
-        Providers("expera_providers/{providerId}")
-        Experiences("experiences/{experienceId}")
-    end
-
-    subgraph "Relationships"
-        Users -- "Manages (Many-to-Many)" --> Providers
-        Providers -- "Offers (1-to-Many)" --> Experiences
-    end
-
-    subgraph "Data Structures"
-        Users_Data["
-            <strong>User Document</strong><br/>
-            - email: string<br/>
-            - name: string<br/>
-            - role: 'Client' | 'Provider'<br/>
-            - createdAt: timestamp
-        "]
-
-        Providers_Data["
-            <strong>Expera Provider Document</strong><br/>
-            - providerUids: array[string] (FK to users.userId)<br/>
-            - publicName: string<br/>
-            - avatarUrl: string (optional)<br/>
-            - bio: string (optional)
-        "]
-
-        Experiences_Data["
-            <strong>Experience Document</strong><br/>
-            - providerId: string (FK to expera_providers.providerId)<br/>
-            - title: string<br/>
-            - category: 'Culinary' | 'Adventure' | 'Wellness' | 'Arts'<br/>
-            - price: number<br/>
-            - photos: array[string]<br/>
-            - description: string<br/>
-            - publishStatus: 'draft' | 'published'<br/>
-            - createdAt: timestamp<br/>
-            - updatedAt: timestamp
-        "]
-    end
-
-    Users --> Users_Data
-    Providers --> Providers_Data
-    Experiences --> Experiences_Data
-```
+This document outlines the Firestore database schema for the Camera World e-commerce application.
 
 ## Collections
 
 ### `users`
 
 *   **Document ID:** `userId` (Firebase Auth UID)
-*   **Description:** Stores essential user information linked to their authentication account.
+*   **Description:** Stores user profile information, roles, and settings.
 
 | Field | Type | Description |
 | :--- | :--- | :--- |
-| `email` | `string` | User's email address. |
-| `name` | `string` | User's display name. |
-| `role` | `string` | User's role (`Client` or `Provider`). |
-| `createdAt` | `timestamp` | Server-generated timestamp of account creation. |
+| `uid` | `string` | The user's unique Firebase Authentication ID. |
+| `email` | `string` | User's primary email address. |
+| `displayName` | `string` | User's full name. |
+| `phone` | `string` | (Optional) User's phone number. |
+| `role` | `string` | User's role (`'customer'` or `'admin'`). |
+| `addresses` | `array` | (Optional) A list of user's shipping addresses. |
+| `status` | `string` | User's account status (`'active'`, `'inactive'`, `'suspended'`). |
+| `createdAt` | `timestamp` | Timestamp of account creation. |
+| `updatedAt` | `timestamp` | Timestamp of the last profile update. |
 
-### `expera_providers`
+---
+
+### `products`
 
 *   **Document ID:** Auto-generated unique ID
-*   **Description:** Stores public-facing information for experience providers (business entities).
+*   **Description:** Stores all product information for the catalog.
 
 | Field | Type | Description |
 | :--- | :--- | :--- |
-| `providerUids` | `array` | An array of `userId`s for users who can manage this entity. |
-| `publicName` | `string` | The public name of the provider (e.g., "Mountain Ascent Guides"). |
-| `avatarUrl` | `string` | (Optional) URL for the provider's avatar. |
-| `bio` | `string` | (Optional) A short biography for the provider. |
+| `name` | `string` | The name of the product. |
+| `description` | `string` | A detailed description of the product. |
+| `price` | `number` | The price of the product. |
+| `categoryID` | `string` | The ID of the category this product belongs to (links to `categories` collection). |
+| `stock` | `number` | The current stock quantity. |
+| `isSecondhand` | `bool` | Flag indicating if the product is second-hand. |
+| `specialistPhone`| `string` | Contact number for a specialist about this product. |
+| `status` | `string` | The product's visibility status (`'active'`, `'inactive'`, `'draft'`). |
+| `createdAt` | `timestamp` | Timestamp of product creation. |
+| `updatedAt` | `timestamp` | Timestamp of the last product update. |
 
-### `experiences`
+---
+
+### `categories`
 
 *   **Document ID:** Auto-generated unique ID
-*   **Description:** Stores details for each experience offered by a provider.
+*   **Description:** Stores product categories.
 
 | Field | Type | Description |
 | :--- | :--- | :--- |
-| `providerId` | `string` | The ID of the `expera_providers` document this experience belongs to. |
-| `title` | `string` | The title of the experience. |
-| `category` | `string` | The category of the experience (`Culinary`, `Adventure`, etc.). |
-| `price` | `number` | The price per person for the experience. |
-| `photos` | `array` | An array of URLs for the experience's photos. |
-| `description` | `string` | A detailed description of the experience. |
-| `publishStatus` | `string` | The status of the experience (`draft` or `published`). |
-| `createdAt` | `timestamp` | Server-generated timestamp of creation. |
-| `updatedAt` | `timestamp` | Server-generated timestamp of the last update. |
+| `name` | `string` | The name of the category. |
+| `description` | `string` | A short description of the category. |
+| `status` | `string` | The category's visibility status (`'active'`, `'inactive'`, `'pending'`). |
+| `createdAt` | `timestamp` | Timestamp of category creation. |
+| `updatedAt` | `timestamp` | Timestamp of the last category update. |
+
+---
+
+### `orders`
+
+*   **Document ID:** Auto-generated unique ID
+*   **Description:** Stores customer order information.
+
+| Field | Type | Description |
+| :--- | :--- | :--- |
+| `userId` | `string` | The ID of the user who placed the order (links to `users` collection). |
+| `products` | `list` | A list of product objects that were ordered. |
+| `shippingAddress`| `map` | The address where the order was shipped. |
+| `totalAmount` | `number` | The total amount of the order. |
+| `status` | `string` | The order status (`'pending'`, `'confirmed'`, `'shipped'`, `'delivered'`, `'cancelled'`). |
+| `paymentMethod` | `string` | The payment method used. |
+| `createdAt` | `timestamp` | Timestamp when the order was placed. |
+
+---
+
+### `carts`
+
+*   **Document ID:** `userId` (same as the user's UID)
+*   **Description:** Stores the contents of a user's shopping cart.
+
+| Field | Type | Description |
+| :--- | :--- | :--- |
+| `...` | `...` | The structure can vary, but it contains cart items linked to a user. |
+
+---
+
+### `admin`
+
+*   **Document ID:** Varies
+*   **Description:** A collection for admin-only data and settings. Access is restricted to users with the `'admin'` role.
+
+---
+
+### `_test_`
+
+*   **Document ID:** Varies
+*   **Description:** A collection used for testing connectivity. It is publicly readable but not writable.

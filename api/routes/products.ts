@@ -54,6 +54,7 @@ router.get('/search', async (req: Request, res: Response, next: NextFunction) =>
             data: products
         });
     } catch (error) {
+        console.log(error);
         next(error);
     }
 });

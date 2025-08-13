@@ -2,9 +2,11 @@
 import React, { createContext, useContext, useEffect, useState, ReactNode, useCallback } from 'react';
 import { User as FirebaseUser, onAuthStateChanged } from 'firebase/auth';
 import { Timestamp } from 'firebase/firestore';
-import { auth } from '../services/firebase';
+import { auth, enableFirestoreNetwork } from '../services/firebase';
 import { User } from '../types';
 import { getUserData, logout as signOutUser } from '../services/auth';
+import { doc, setDoc } from 'firebase/firestore';
+import { db } from '../services/firebase';
 
 interface AuthContextType {
   currentUser: User | null;
@@ -35,32 +37,56 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  const fetchUserData = useCallback(async (user: FirebaseUser) => {
-    setLoading(true);
-    setError(null);
+  const bootstrapUser = useCallback(async (uid: string) => {
     try {
-      console.log(`🔍 Fetching user data for UID: ${user.uid}`);
-      const userData = await getUserData(user.uid);
-      if (userData) {
-        setCurrentUser(userData);
-        console.log('✅ User data fetched successfully');
-      } else {
-        console.warn('📄 User document not found in Firestore. Creating a basic user profile.');
-        // This can happen if user registration was interrupted.
-        // We create a basic profile to ensure the app doesn't crash.
+      // Make sure network is enabled (no-op if already)
+      await enableFirestoreNetwork();
+
+      const userData = await getUserData(uid);
+      if (!userData) {
+        // Only attempt write if online
+        if (!navigator.onLine) {
+          throw new Error('Offline - postpone user creation');
+        }
+        
+        console.warn('📄 User document not found. Creating basic user profile.');
         const basicUser: User = {
-          uid: user.uid,
-          email: user.email || '',
-          displayName: user.displayName || 'New User',
-          phone: user.phoneNumber || '',
+          uid: uid,
+          email: auth.currentUser?.email || '',
+          displayName: auth.currentUser?.displayName || 'New User',
+          phone: auth.currentUser?.phoneNumber || '',
           role: 'customer',
           addresses: [],
           status: 'active',
           createdAt: Timestamp.now(),
           updatedAt: Timestamp.now(),
         };
-        setCurrentUser(basicUser);
+        
+        await setDoc(doc(db, 'users', uid), basicUser);
+        console.log('✅ Basic user profile created');
+        return basicUser;
       }
+      return userData;
+    } catch (error) {
+      console.warn('User bootstrap skipped:', (error as Error).message);
+      // Queue a retry when navigator.onLine flips to true
+      const retryOnline = () => {
+        console.log('🔄 Retrying user bootstrap after coming online');
+        bootstrapUser(uid);
+      };
+      window.addEventListener('online', retryOnline, { once: true });
+      throw error;
+    }
+  }, []);
+
+  const fetchUserData = useCallback(async (user: FirebaseUser) => {
+    setLoading(true);
+    setError(null);
+    try {
+      console.log(`🔍 Fetching user data for UID: ${user.uid}`);
+      const userData = await bootstrapUser(user.uid);
+      setCurrentUser(userData);
+      console.log('✅ User data fetched successfully');
     } catch (err) {
       console.error('❌ Error fetching user data:', err);
       setError('Failed to load user profile.');
@@ -78,7 +104,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [bootstrapUser]);
 
   const refetchUser = useCallback(async () => {
     if (firebaseUser) {

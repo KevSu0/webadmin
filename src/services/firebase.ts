@@ -1,14 +1,17 @@
 // Firebase configuration with robust connection management
-import { initializeApp } from 'firebase/app';
+import { initializeApp, getApps, getApp } from 'firebase/app';
 import { getAuth, connectAuthEmulator } from 'firebase/auth';
 import {
-  getFirestore,
-  enableIndexedDbPersistence,
+  initializeFirestore,
+  persistentLocalCache,
+  persistentMultipleTabManager,
   connectFirestoreEmulator,
   getDoc,
+  enableNetwork,
   doc as firestoreDoc // alias to avoid conflict
 } from 'firebase/firestore';
 import { getStorage, connectStorageEmulator } from 'firebase/storage';
+import { setLogLevel } from 'firebase/app';
 
 // Firebase configuration from environment variables
 const firebaseConfig = {
@@ -33,12 +36,25 @@ const validateConfig = () => {
 
 validateConfig();
 
-// Initialize Firebase
-const app = initializeApp(firebaseConfig);
+// Enable debug logging for Firebase
+setLogLevel('debug');
+
+// Initialize Firebase - ensure single instance
+const app = getApps().length ? getApp() : initializeApp(firebaseConfig);
 
 // Initialize services
 export const auth = getAuth(app);
-export const db = getFirestore(app);
+
+// Initialize Firestore with long-polling fallback (useFetchStreams not available in current SDK)
+export const db = initializeFirestore(app, {
+  experimentalAutoDetectLongPolling: true,   // Fall back to long-polling if needed
+  // Force long-polling if auto-detect doesn't work:
+  // experimentalForceLongPolling: true,
+  localCache: persistentLocalCache({ 
+    tabManager: persistentMultipleTabManager() 
+  })
+});
+
 export const storage = getStorage(app);
 
 // Use emulators in development - DISABLED to use live Firebase services
@@ -55,21 +71,57 @@ export const storage = getStorage(app);
 // }
 console.log('🔥 Using live Firebase services (emulators disabled)');
 
-// Enable offline persistence for Firestore
-enableIndexedDbPersistence(db)
-  .then(() => console.log('🔥 Firestore offline persistence enabled'))
-  .catch((err) => {
-    if (err.code === 'failed-precondition') {
-      console.warn('Firestore offline persistence failed: multiple tabs open?');
-    } else if (err.code === 'unimplemented') {
-      console.warn('Firestore offline persistence not available in this browser.');
-    } else {
-      console.error('Firestore offline persistence error:', err);
-    }
-  });
+// Modern cache is configured in initializeFirestore above
+console.log('🔥 Firestore initialized with persistent local cache and multiple tab support');
 
 // Export Firestore utilities
 export { firestoreDoc as doc };
+
+// Write operation error handling utilities
+export const handleFirestoreWriteError = (error: any, operation: string) => {
+  console.error(`Firestore ${operation} failed:`, {
+    code: error.code,
+    message: error.message,
+    details: error
+  });
+  
+  if (error.code === 'invalid-argument') {
+    console.warn('Invalid argument error - check for:', {
+      oversizedDoc: 'Document size > 1MB',
+      undefinedFields: 'Undefined values in document data',
+      invalidFieldTypes: 'Unsupported field types',
+      invalidDocumentPath: 'Invalid document path or ID'
+    });
+  }
+  
+  throw error;
+};
+
+// Safe write operation wrapper
+export const safeFirestoreWrite = async <T>(operation: () => Promise<T>, operationName: string): Promise<T> => {
+  try {
+    // Check if online before attempting write
+    if (!navigator.onLine) {
+      throw new Error('offline - write operation skipped');
+    }
+    
+    return await operation();
+  } catch (error: any) {
+    handleFirestoreWriteError(error, operationName);
+    throw error; // Re-throw after logging
+  }
+};
+
+// Network management utilities
+export const enableFirestoreNetwork = async () => {
+  try {
+    await enableNetwork(db);
+    console.log('✅ Firestore network enabled');
+  } catch (error) {
+    console.error('❌ Failed to enable Firestore network:', error);
+    throw error;
+  }
+};
 
 // Reliable connection status utility
 export const getConnectionStatus = () => ({

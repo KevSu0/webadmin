@@ -187,49 +187,12 @@ export const getOrderStatistics = async (): Promise<{
   totalRevenue: number;
 }> => {
   try {
-    const snapshot = await getDocs(collection(db, 'orders'));
-    
-    let totalOrders = 0;
-    let pendingOrders = 0;
-    let processingOrders = 0;
-    let shippedOrders = 0;
-    let deliveredOrders = 0;
-    let cancelledOrders = 0;
-    let totalRevenue = 0;
-    
-    snapshot.forEach((doc) => {
-      const order = doc.data() as Order;
-      totalOrders++;
-      
-      switch (order.status) {
-        case 'pending':
-          pendingOrders++;
-          break;
-        case 'processing':
-          processingOrders++;
-          break;
-        case 'shipped':
-          shippedOrders++;
-          break;
-        case 'delivered':
-          deliveredOrders++;
-          totalRevenue += order.total;
-          break;
-        case 'cancelled':
-          cancelledOrders++;
-          break;
-      }
-    });
-    
-    return {
-      totalOrders,
-      pendingOrders,
-      processingOrders,
-      shippedOrders,
-      deliveredOrders,
-      cancelledOrders,
-      totalRevenue
-    };
+    const response = await fetch('/api/orders/statistics');
+    if (!response.ok) {
+        throw new Error('Failed to get order statistics');
+    }
+    const result = await response.json();
+    return result.data;
   } catch (error: any) {
     console.error('Error getting order statistics:', error);
     throw error;
@@ -239,22 +202,12 @@ export const getOrderStatistics = async (): Promise<{
 // Search orders by order ID or customer email
 export const searchOrders = async (searchTerm: string): Promise<Order[]> => {
   try {
-    // This is a basic implementation. For better search,
-    // consider using Algolia or similar search service
-    const orders = await getCollectionData<Order>('orders');
-    const searchLower = searchTerm.toLowerCase();
-    
-    const filteredOrders = orders.filter(order => 
-      order.id.toLowerCase().includes(searchLower) ||
-      order.shippingAddress.email?.toLowerCase().includes(searchLower) ||
-      order.trackingNumber?.toLowerCase().includes(searchLower)
-    );
-    
-    return filteredOrders.sort((a, b) => {
-      const aTime = a.createdAt?.toMillis() || 0;
-      const bTime = b.createdAt?.toMillis() || 0;
-      return bTime - aTime;
-    });
+    const response = await fetch(`/api/orders/search?term=${searchTerm}`);
+    if (!response.ok) {
+        throw new Error('Failed to search orders');
+    }
+    const result = await response.json();
+    return result.data;
   } catch (error: any) {
     console.error('Error searching orders:', error);
     throw error;

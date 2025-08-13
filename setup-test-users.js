@@ -63,7 +63,7 @@ function backupOriginalRules() {
   }
 }
 
-function deployTemporaryRules() {
+async function deployTemporaryRules() {
   try {
     // Copy temp rules to main rules file
     const tempRules = readFileSync('firestore.rules.temp', 'utf8');

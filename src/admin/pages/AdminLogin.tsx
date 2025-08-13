@@ -47,9 +47,9 @@ const AdminLogin: React.FC = () => {
       
       toast.success('Welcome back, Admin!');
       navigate('/admin');
-    } catch (error: any) {
+    } catch (error) {
       console.error('Login error:', error);
-      
+      const err = error as { code?: string; message?: string };
       // Handle specific authentication errors
       if (error.code === 'auth/invalid-credential' || error.code === 'auth/wrong-password' || error.code === 'auth/user-not-found') {
         setFieldErrors({ 
@@ -80,9 +80,10 @@ const AdminLogin: React.FC = () => {
       await sendPasswordReset(email);
       toast.success('Password reset email sent! Check your inbox.');
       setShowForgotPassword(false);
-    } catch (error: any) {
+    } catch (error) {
       console.error('Password reset error:', error);
-      toast.error(error.message || 'Failed to send password reset email');
+      const err = error as { message?: string };
+      toast.error(err.message || 'Failed to send password reset email');
     }
   };
 

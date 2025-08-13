@@ -5,13 +5,14 @@ import {
   signOut,
   sendPasswordResetEmail,
   User as FirebaseUser,
-  fetchSignInMethodsForEmail
+  fetchSignInMethodsForEmail,
+  deleteUser
 } from 'firebase/auth';
 import { doc, setDoc, getDoc, serverTimestamp } from 'firebase/firestore';
 import { auth, db } from './firebase';
 import { User, UserRegistration, UserRole, ApiResponse } from '../types';
-import { handleError } from '../utils/errorHandler';
-import { getFirebaseErrorMessage, validateEmail, validatePasswordStrength } from '../utils/authValidation';
+import { handleError, getErrorMessage } from '../utils/errorHandler';
+import { validateEmail, validatePasswordStrength } from '../utils/authValidation';
 
 // Sign in with email and password
 export const signIn = async (email: string, password: string): Promise<FirebaseUser> => {
@@ -28,9 +29,9 @@ export const signIn = async (email: string, password: string): Promise<FirebaseU
     const result = await signInWithEmailAndPassword(auth, email, password);
     console.log('Sign in successful for user:', result.user.uid);
     return result.user;
-  } catch (error: any) {
+  } catch (error) {
     console.error('Error signing in:', error);
-    const friendlyMessage = getFirebaseErrorMessage(error.code);
+    const friendlyMessage = getErrorMessage(error as Error);
     const enhancedError = new Error(friendlyMessage);
     enhancedError.name = error.code || 'SignInError';
     throw enhancedError;
@@ -39,7 +40,6 @@ export const signIn = async (email: string, password: string): Promise<FirebaseU
 
 // Register new user
 export const registerUser = async (userData: UserRegistration): Promise<FirebaseUser> => {
-  try {
     console.log('Attempting to register user:', userData.email);
 
     // Validate input data
@@ -57,34 +57,39 @@ export const registerUser = async (userData: UserRegistration): Promise<Firebase
     const result = await createUserWithEmailAndPassword(auth, userData.email, userData.password);
     console.log('Firebase Auth user created successfully:', result.user.uid);
 
-    // Create user document in Firestore
-    await createUserDocument(result.user.uid, {
-      email: userData.email,
-      displayName: userData.displayName.trim(),
-      phone: userData.phone || '',
-      role: 'customer', // Default role
-      addresses: [],
-      createdAt: serverTimestamp()
-    });
-    
-    console.log('User registration completed successfully');
-    return result.user;
-  } catch (error: any) {
-    console.error('Error registering user:', error);
-    const friendlyMessage = getFirebaseErrorMessage(error.code);
-    const enhancedError = new Error(friendlyMessage);
-    enhancedError.name = error.code || 'RegistrationError';
-    handleError(enhancedError, 'user registration');
-    throw enhancedError;
-  }
+    try {
+        // Create user document in Firestore
+        await createUserDocument(result.user.uid, {
+          email: userData.email,
+          displayName: userData.displayName.trim(),
+          phone: userData.phone || '',
+          role: 'customer', // Default role
+          addresses: [],
+          createdAt: serverTimestamp(),
+          status: 'active',
+          updatedAt: serverTimestamp()
+        });
+
+        console.log('User registration completed successfully');
+        return result.user;
+    } catch (error) {
+        // If Firestore document creation fails, delete the Auth user to prevent orphaned accounts
+        console.error('Error creating user document, rolling back auth user creation:', error);
+        await deleteUser(result.user);
+        const friendlyMessage = getErrorMessage(error as Error);
+        const enhancedError = new Error(friendlyMessage);
+        enhancedError.name = error.code || 'RegistrationError';
+        handleError(enhancedError, 'user registration');
+        throw enhancedError;
+    }
 };
 
 // Helper function to create user document in Firestore
-const createUserDocument = async (uid: string, userData: any): Promise<void> => {
+const createUserDocument = async (uid: string, userData: Omit<User, 'id' | 'uid'>): Promise<void> => {
   try {
     await setDoc(doc(db, 'users', uid), userData);
     console.log('User document created in Firestore');
-  } catch (error: any) {
+  } catch (error) {
     console.error('Error creating user document:', error);
     // This will be caught by the calling function (registerUser)
     throw new Error('Failed to create user profile. Please try again.');
@@ -104,11 +109,11 @@ export const getUserData = async (uid: string): Promise<User | null> => {
     
     console.warn(`User document not found for UID: ${uid}`);
     return null;
-  } catch (error: any) {
+  } catch (error) {
     console.error('Error fetching user data:', error);
     // Don't throw network errors if offline, let the cache handle it.
     // Re-throw other critical errors.
-    if (error.code !== 'unavailable') {
+    if ((error as { code: string }).code !== 'unavailable') {
       throw new Error('Could not fetch user data.');
     }
     return null; // Return null on network error, UI should handle this state.
@@ -177,14 +182,16 @@ export const createAdminUser = async (userData: UserRegistration): Promise<ApiRe
       phone: userData.phone || '',
       role: 'admin', // Admin role
       addresses: [],
-      createdAt: serverTimestamp()
+      createdAt: serverTimestamp(),
+      status: 'active',
+      updatedAt: serverTimestamp()
     });
 
     return { success: true, data: result.user, message: 'Admin user created successfully' };
-  } catch (error: any) {
+  } catch (error) {
     console.error('Error creating admin user:', error);
-    const message = getFirebaseErrorMessage(error.code);
-    return { success: false, error: error.code || 'AdminCreationError', message };
+    const message = getErrorMessage(error as Error);
+    return { success: false, error: (error as { code: string }).code || 'AdminCreationError', message };
   }
 };
 
@@ -203,7 +210,7 @@ export const updateUserProfile = async (uid: string, updates: Partial<User>): Pr
   try {
     const userDocRef = doc(db, 'users', uid);
     await setDoc(userDocRef, updates, { merge: true });
-  } catch (error: any) {
+  } catch (error) {
     console.error('Error updating user profile:', error);
     throw new Error('Failed to update profile. Please try again.');
   }
@@ -223,10 +230,10 @@ export const sendPasswordReset = async (email: string): Promise<ApiResponse<void
       success: true,
       message: 'Password reset email sent successfully. Please check your inbox.'
     };
-  } catch (error: any) {
+  } catch (error) {
     console.error('Error sending password reset email:', error);
-    const friendlyMessage = getFirebaseErrorMessage(error.code);
-    return { success: false, error: error.code || 'PasswordResetError', message: friendlyMessage };
+    const friendlyMessage = getErrorMessage(error as Error);
+    return { success: false, error: (error as { code: string }).code || 'PasswordResetError', message: friendlyMessage };
   }
 };
 
@@ -237,7 +244,8 @@ export const checkEmailExists = async (email: string): Promise<boolean> => {
     return methods.length > 0;
   } catch (error) {
     console.error('Error checking if email exists:', error);
-    // In case of error, assume it exists to prevent user from getting stuck.
-    return true;
+    // In case of error, assume it does not exist to allow user to try to register.
+    // The createUserWithEmailAndPassword will ultimately be the source of truth.
+    return false;
   }
 };

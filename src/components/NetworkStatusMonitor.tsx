@@ -1,6 +1,6 @@
 // Enhanced draggable network status monitoring component
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { Wifi, WifiOff, RefreshCw, AlertTriangle, CheckCircle, Minus, X, Move } from 'lucide-react';
+import { Wifi, WifiOff, RefreshCw, Minus, X, Move } from 'lucide-react';
 import { getConnectionStatus } from '../services/firebase';
 import { useMediaQuery } from '../hooks/useMediaQuery';
 
@@ -32,7 +32,6 @@ interface ConnectionStats {
 }
 
 const NetworkStatusMonitor: React.FC<NetworkStatusProps> = ({
-  showDetails = false,
   position = 'top-right',
   compact = false,
   onRetry,
@@ -73,7 +72,6 @@ const NetworkStatusMonitor: React.FC<NetworkStatusProps> = ({
   // Update connection status
   const updateStatus = () => {
     const online = navigator.onLine;
-    const firebaseStatus = getConnectionStatus();
     
     setIsOnline(online);
     setStats(prev => ({
@@ -125,11 +123,6 @@ const NetworkStatusMonitor: React.FC<NetworkStatusProps> = ({
 
   const handleClose = useCallback(() => {
     const newState = { ...windowState, isVisible: false };
-    saveWindowState(newState);
-  }, [windowState, saveWindowState]);
-
-  const handleShow = useCallback(() => {
-    const newState = { ...windowState, isVisible: true };
     saveWindowState(newState);
   }, [windowState, saveWindowState]);
 

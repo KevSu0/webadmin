@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
-import { getConnectionStatus } from '../services/firebase';
-import { Wifi, WifiOff, RefreshCw, AlertTriangle } from 'lucide-react';
+import { WifiOff, RefreshCw, AlertTriangle } from 'lucide-react';
 
 interface ConnectionStatusProps {
   className?: string;

@@ -41,18 +41,19 @@ export const auth = getAuth(app);
 export const db = getFirestore(app);
 export const storage = getStorage(app);
 
-// Use emulators in development
-if (import.meta.env.DEV) {
-  try {
-    console.log('Connecting to Firebase emulators...');
-    connectAuthEmulator(auth, 'http://127.0.0.1:9099');
-    connectFirestoreEmulator(db, '127.0.0.1', 8080);
-    connectStorageEmulator(storage, '127.0.0.1', 9199);
-    console.log('🔥 Successfully connected to Firebase emulators');
-  } catch (error) {
-    console.error('Error connecting to Firebase emulators:', error);
-  }
-}
+// Use emulators in development - DISABLED to use live Firebase services
+// if (import.meta.env.DEV) {
+//   try {
+//     console.log('Connecting to Firebase emulators...');
+//     connectAuthEmulator(auth, 'http://127.0.0.1:9099');
+//     connectFirestoreEmulator(db, '127.0.0.1', 8080);
+//     connectStorageEmulator(storage, '127.0.0.1', 9199');
+//     console.log('🔥 Successfully connected to Firebase emulators');
+//   } catch (error) {
+//     console.error('Error connecting to Firebase emulators:', error);
+//   }
+// }
+console.log('🔥 Using live Firebase services (emulators disabled)');
 
 // Enable offline persistence for Firestore
 enableIndexedDbPersistence(db)

@@ -26,6 +26,12 @@ app.use('/api/auth', authRoutes);
 app.use('/api/products', productRoutes);
 app.use('/api/orders', orderRoutes);
 
+if (process.env.VITEST) {
+    app.get('/error', (req, res, next) => {
+        next(new Error('Test error'));
+    });
+}
+
 /**
  * health
  */
@@ -37,22 +43,22 @@ app.use('/api/health', (req: Request, res: Response): void => {
 });
 
 /**
- * error handler middleware
- */
-app.use((error: Error, req: Request, res: Response) => {
-  res.status(500).json({
-    success: false,
-    error: 'Server internal error'
-  });
-});
-
-/**
  * 404 handler
  */
 app.use((req: Request, res: Response) => {
   res.status(404).json({
     success: false,
     error: 'API not found'
+  });
+});
+
+/**
+ * error handler middleware
+ */
+app.use((error: Error, req: Request, res: Response, next: Function) => {
+  res.status(500).json({
+    success: false,
+    error: 'Server internal error'
   });
 });
 

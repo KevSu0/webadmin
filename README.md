@@ -70,15 +70,35 @@ src/
    - Copy your Firebase config and update `src/services/firebase.ts`
 
 3. **Environment Variables**:
-   Create a `.env` file in the root directory:
-   ```env
-   VITE_FIREBASE_API_KEY=your_api_key
-   VITE_FIREBASE_AUTH_DOMAIN=your_auth_domain
-   VITE_FIREBASE_PROJECT_ID=your_project_id
-   VITE_FIREBASE_STORAGE_BUCKET=your_storage_bucket
-   VITE_FIREBASE_MESSAGING_SENDER_ID=your_sender_id
-   VITE_FIREBASE_APP_ID=your_app_id
+   
+   ⚠️ **SECURITY WARNING**: Never commit `.env` files with real credentials to version control!
+   
+   Copy `.env.example` to `.env` and configure with your Firebase credentials:
+   ```bash
+   cp .env.example .env
    ```
+   
+   Then edit `.env` with your actual Firebase project credentials:
+   ```env
+   # Firebase Configuration
+   VITE_FIREBASE_API_KEY=your_actual_firebase_api_key
+   VITE_FIREBASE_AUTH_DOMAIN=your-project-id.firebaseapp.com
+   VITE_FIREBASE_PROJECT_ID=your-project-id
+   VITE_FIREBASE_STORAGE_BUCKET=your-project-id.appspot.com
+   VITE_FIREBASE_MESSAGING_SENDER_ID=your_messaging_sender_id
+   VITE_FIREBASE_APP_ID=your_firebase_app_id
+   
+   # Development
+   NODE_ENV=development
+   PORT=3001
+   ```
+   
+   **Security Best Practices**:
+   - ✅ `.env` is already in `.gitignore` - never remove it
+   - ✅ Use `.env.example` for documentation with placeholder values
+   - ✅ Configure real environment variables in your deployment platform
+   - ❌ Never commit files containing real API keys or secrets
+   - ❌ Never share `.env` files in chat, email, or documentation
 
 4. **Start development server**:
    ```bash
@@ -209,6 +229,27 @@ src/
 - [ ] Customer reviews
 - [ ] Wishlist functionality
 
+## Security Guidelines
+
+### Environment Variables Security
+- **NEVER** commit `.env` files with real credentials to version control
+- **ALWAYS** use `.env.example` for documentation with placeholder values
+- **VERIFY** that `.env` is listed in `.gitignore` before committing
+- **CONFIGURE** real environment variables in your deployment platform (Vercel, Netlify, etc.)
+- **ROTATE** API keys immediately if accidentally committed
+
+### Firebase Security
+- Use Firebase Security Rules to protect your database
+- Implement proper role-based access control
+- Never expose service account keys in client-side code
+- Use Firebase Auth for user authentication and authorization
+
+### General Security Best Practices
+- Keep dependencies updated to patch security vulnerabilities
+- Use HTTPS in production environments
+- Implement proper input validation and sanitization
+- Follow the principle of least privilege for user roles
+
 ## Contributing
 
 1. Follow the established project structure
@@ -216,6 +257,7 @@ src/
 3. Follow React best practices
 4. Write meaningful commit messages
 5. Test thoroughly before submitting
+6. **NEVER commit sensitive data** - check `.env` and other config files
 
 ## License
 

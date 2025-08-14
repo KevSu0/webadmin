@@ -1,4 +1,4 @@
-export { Button } from './Button'
-export type { ButtonProps, ButtonVariant } from './Button'
-export { Badge } from './Badge'
-export type { BadgeProps, BadgeVariant } from './Badge'
+export { Button, buttonVariants } from './Button'
+export type { ButtonProps } from './Button'
+export { Badge, badgeVariants } from './Badge'
+export type { BadgeProps } from './Badge'

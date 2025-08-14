@@ -1,4 +1,5 @@
-import { describe, it, expect, vi } from 'vitest';
+/// <reference types="vitest/globals" />
+import { describe, it, expect, vi, type Mock } from 'vitest';
 import { getUserData, checkAdminRole, getUserRole } from './auth';
 import { doc, getDoc } from 'firebase/firestore';
 
@@ -47,7 +48,7 @@ describe('Auth Service', () => {
 
     describe('getUserData', () => {
         it('should return user data if document exists', async () => {
-            (getDoc as vi.Mock).mockResolvedValue({
+            (getDoc as Mock).mockResolvedValue({
                 exists: () => true,
                 data: () => ({ name: 'Test User' }),
             });
@@ -57,7 +58,7 @@ describe('Auth Service', () => {
         });
 
         it('should return null if document does not exist', async () => {
-            (getDoc as vi.Mock).mockResolvedValue({
+            (getDoc as Mock).mockResolvedValue({
                 exists: () => false,
             });
             const userData = await getUserData('123');
@@ -68,7 +69,7 @@ describe('Auth Service', () => {
 
     describe('checkAdminRole', () => {
         it('should return true if user is admin', async () => {
-            (getDoc as vi.Mock).mockResolvedValue({
+            (getDoc as Mock).mockResolvedValue({
                 exists: () => true,
                 data: () => ({ role: 'admin' }),
             });
@@ -77,7 +78,7 @@ describe('Auth Service', () => {
         });
 
         it('should return false if user is not admin', async () => {
-            (getDoc as vi.Mock).mockResolvedValue({
+            (getDoc as Mock).mockResolvedValue({
                 exists: () => true,
                 data: () => ({ role: 'customer' }),
             });
@@ -88,7 +89,7 @@ describe('Auth Service', () => {
 
     describe('getUserRole', () => {
         it('should return user role data if user exists', async () => {
-            (getDoc as vi.Mock).mockResolvedValue({
+            (getDoc as Mock).mockResolvedValue({
                 exists: () => true,
                 data: () => ({
                     uid: '123',
@@ -107,7 +108,7 @@ describe('Auth Service', () => {
         });
 
         it('should return null if user does not exist', async () => {
-            (getDoc as vi.Mock).mockResolvedValue({
+            (getDoc as Mock).mockResolvedValue({
                 exists: () => false,
             });
             const userRole = await getUserRole('123');

@@ -50,7 +50,10 @@ Choose one of the following methods:
 **Option A: Service Account Key (Recommended)**
 - [ ] Service account key generated from Firebase Console
 - [ ] `serviceAccountKey.json` file downloaded and placed in project root
-- [ ] `serviceAccountKey.json` added to `.gitignore`
+- [ ] **SECURITY CRITICAL**: Verify `serviceAccountKey.json` is in `.gitignore` (already configured)
+- [ ] Use `serviceAccountKey.example.json` as template for structure reference
+- [ ] Store actual service account key securely with restricted access
+- [ ] **NEVER commit the actual serviceAccountKey.json to version control**
 
 **Option B: Default Application Credentials**
 - [ ] Google Cloud SDK installed
@@ -98,11 +101,15 @@ Choose one of the following methods:
 ## Security & Monitoring
 
 ### 13. Security Configuration
+- [ ] **Service Account Key Security**: Actual `serviceAccountKey.json` never committed to repository
+- [ ] Service account key stored securely with proper access controls
+- [ ] Production uses environment variables or secure credential management
 - [ ] Firestore security rules reviewed and tested
 - [ ] Storage security rules reviewed and tested
 - [ ] API keys restricted (if applicable)
 - [ ] CORS settings configured
 - [ ] Rate limiting configured (if applicable)
+- [ ] Audit logging enabled for administrative actions
 
 ### 14. Monitoring & Alerts
 - [ ] Firebase usage monitoring set up

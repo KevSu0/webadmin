@@ -76,7 +76,12 @@ You need to set up Firebase Admin SDK credentials. Choose one of these methods:
 2. Navigate to Project Settings > Service Accounts
 3. Click "Generate new private key"
 4. Download the JSON file and save it as `serviceAccountKey.json` in the project root
-5. **Important:** Add `serviceAccountKey.json` to your `.gitignore` file
+5. **CRITICAL SECURITY:** 
+   - The `serviceAccountKey.json` file contains sensitive credentials that grant full access to your Firebase project
+   - This file is already listed in `.gitignore` to prevent accidental commits
+   - Use the provided `serviceAccountKey.example.json` as a template to understand the expected structure
+   - NEVER commit the actual `serviceAccountKey.json` file to version control
+   - Store this file securely and restrict access to authorized personnel only
 
 #### Method B: Default Application Credentials
 ```bash
@@ -154,10 +159,19 @@ The script will prompt you for:
 
 ## Security Notes
 
-- Never commit `serviceAccountKey.json` to version control
+### Service Account Key Security
+- **NEVER commit `serviceAccountKey.json` to version control** - this file contains sensitive credentials
+- The actual `serviceAccountKey.json` file has been removed from this repository for security
+- Use `serviceAccountKey.example.json` as a template to create your own service account key file
+- Store the actual service account key file securely and restrict access
+- For production deployments, use environment variables or secure credential management systems
+
+### General Security Best Practices
 - Use environment variables for sensitive configuration in production
 - Regularly review and update your security rules
 - Monitor Firebase usage and set up billing alerts
+- Implement proper access controls and user permissions
+- Enable audit logging for administrative actions
 
 ## Next Steps
 
